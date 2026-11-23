@@ -1,5 +1,4 @@
 {{define "content"}}
-<h2>배틀로얄 메인 화면</h2>
 
 {{if eq .GameStatus "ended"}}
 <div class="br-error">프로그램이 종료되었습니다. <a href="/winner">역대 우승자 확인</a></div>
@@ -57,16 +56,16 @@
   <input type="hidden" id="move-area-id" name="area_id" value="">
 </form>
 
-<div style="margin: 10px auto 14px auto; max-width: 480px;">
-  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px; font-size:9pt;">
+<div style="margin: 6px auto 14px auto; max-width: 480px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px;">
     <span><strong>현재:</strong> <span style="color:#60ff90;">{{.AreaName}} ({{.AreaCode}})</span></span>
     <span><strong>다음 금지구역:</strong> <span class="red">{{formatTime .NextAreaAt}}</span> ({{.ForbiddenCount}}/22)</span>
   </div>
-  <div style="text-align:right; margin-bottom:4px; font-size:8pt; color:#bbb;">
-    <span style="display:inline-block;width:9px;height:9px;background:rgba(0,255,136,0.45);border:1px solid #00ff88;vertical-align:middle;"></span> 현재
-    <span style="display:inline-block;width:9px;height:9px;background:rgba(80,180,255,0.35);border:1px solid #60c0ff;vertical-align:middle;margin-left:6px;"></span> 이동가능(클릭/WASD)
-    <span style="display:inline-block;width:9px;height:9px;background:rgba(240,32,32,0.45);border:1px solid #ff5050;vertical-align:middle;margin-left:6px;"></span> 금지
-    <span style="display:inline-block;width:9px;height:9px;background:rgba(255,200,0,0.25);border:1px dashed #ffcc00;vertical-align:middle;margin-left:6px;"></span> 예정
+  <div style="text-align:right; margin-bottom:6px; color:#ccc;">
+    <span style="display:inline-block;width:10px;height:10px;background:rgba(0,255,136,0.45);border:1px solid #00ff88;vertical-align:middle;"></span> 현재
+    <span style="display:inline-block;width:10px;height:10px;background:rgba(80,180,255,0.35);border:1px solid #60c0ff;vertical-align:middle;margin-left:6px;"></span> 이동가능(클릭/WASD)
+    <span style="display:inline-block;width:10px;height:10px;background:rgba(240,32,32,0.45);border:1px solid #ff5050;vertical-align:middle;margin-left:6px;"></span> 금지
+    <span style="display:inline-block;width:10px;height:10px;background:rgba(255,200,0,0.25);border:1px dashed #ffcc00;vertical-align:middle;margin-left:6px;"></span> 예정
   </div>
   <div style="position:relative; width:100%; aspect-ratio:1/1; border:1px solid #555;">
     <img src="/static/img/map.jpg" alt="배틀로얄 지도" style="width:100%; height:100%; display:block;">
