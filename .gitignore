@@ -29,6 +29,9 @@ coverage.*
 *.log
 logs/
 
+# Local-only dev docs
+docs/
+
 # OS / Editor / IDE
 .DS_Store
 Thumbs.db
