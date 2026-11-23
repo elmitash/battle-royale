@@ -172,6 +172,7 @@ func (h *PlayHandler) BattlePage(w http.ResponseWriter, r *http.Request) {
 		"AreaCode":       areaCode,
 		"AreaInfo":       areaInfo,
 		"MapCells":       mapCells,
+		"Combos":         h.Engine.AvailableCombinations(u),
 		"NorthPos":       northPos,
 		"SouthPos":       southPos,
 		"WestPos":        westPos,

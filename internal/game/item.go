@@ -318,6 +318,40 @@ func (e *Engine) DropItem(ctx context.Context, userID string, slot int) (string,
 	return fmt.Sprintf("%s을(를) 버렸다.", it.Name), nil
 }
 
+// ComboOption represents a currently craftable item pair in a user's bag.
+type ComboOption struct {
+	Slot1 int
+	Slot2 int
+	Label string
+}
+
+// AvailableCombinations returns all valid synthesis recipes from the user's slots 0..4.
+func (e *Engine) AvailableCombinations(u *model.User) []ComboOption {
+	var out []ComboOption
+	seen := make(map[string]bool)
+	for i := 0; i < 5; i++ {
+		if u.Items[i].Name == "" || u.Items[i].Name == "없음" {
+			continue
+		}
+		for j := i + 1; j < 5; j++ {
+			if u.Items[j].Name == "" || u.Items[j].Name == "없음" {
+				continue
+			}
+			for _, r := range e.Master.Recipes {
+				if (r.Ingredient1 == u.Items[i].Name && r.Ingredient2 == u.Items[j].Name) ||
+					(r.Ingredient1 == u.Items[j].Name && r.Ingredient2 == u.Items[i].Name) {
+					label := fmt.Sprintf("%s+%s=%s", u.Items[i].Name, u.Items[j].Name, r.ResultName)
+					if !seen[label] {
+						seen[label] = true
+						out = append(out, ComboOption{Slot1: i, Slot2: j, Label: label})
+					}
+				}
+			}
+		}
+	}
+	return out
+}
+
 // CombineItems attempts to synthesize two inventory slots using gousei_tbl recipes.
 func (e *Engine) CombineItems(ctx context.Context, userID string, slot1, slot2 int) (string, error) {
 	if slot1 < 0 || slot1 >= 5 || slot2 < 0 || slot2 >= 5 || slot1 == slot2 {

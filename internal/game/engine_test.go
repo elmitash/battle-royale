@@ -132,6 +132,13 @@ func TestItemUseDropAndCombine(t *testing.T) {
 		t.Fatalf("seed items: %v", err)
 	}
 
+	// Check AvailableCombinations before combining
+	uPre, _ := eng.LoadUser(ctx, "u2")
+	combos := eng.AvailableCombinations(uPre)
+	if len(combos) != 1 || combos[0].Label != "경유+비료=화약" {
+		t.Fatalf("expected combo 경유+비료=화약, got %+v", combos)
+	}
+
 	// Combine slots 0 and 1
 	msg, err := eng.CombineItems(ctx, "u2", 0, 1)
 	if err != nil {

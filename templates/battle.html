@@ -173,17 +173,18 @@
 </table>
 
 {{if ne .User.Status "DEAD"}}
-<form method="POST" action="/battle/item/combine" style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+<div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
   <strong>아이템 조합:</strong>
-  <select name="slot1">
-    <option value="0">1번</option><option value="1">2번</option><option value="2">3번</option><option value="3">4번</option><option value="4">5번</option>
-  </select>
-  +
-  <select name="slot2">
-    <option value="1">2번</option><option value="0">1번</option><option value="2">3번</option><option value="3">4번</option><option value="4">5번</option>
-  </select>
-  <button type="submit">조합하기</button>
-</form>
+  {{range .Combos}}
+  <form method="POST" action="/battle/item/combine" style="display:inline;">
+    <input type="hidden" name="slot1" value="{{.Slot1}}">
+    <input type="hidden" name="slot2" value="{{.Slot2}}">
+    <button type="submit">{{.Label}}</button>
+  </form>
+  {{else}}
+  <span style="color:#888;">현재 조합 가능한 아이템이 없습니다.</span>
+  {{end}}
+</div>
 
 <script>
 const dirTargets = {
