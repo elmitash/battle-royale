@@ -64,7 +64,7 @@
   </div>
   <div style="text-align:right; margin-bottom:4px; font-size:8pt; color:#bbb;">
     <span style="display:inline-block;width:9px;height:9px;background:rgba(0,255,136,0.45);border:1px solid #00ff88;vertical-align:middle;"></span> 현재
-    <span style="display:inline-block;width:9px;height:9px;background:rgba(80,180,255,0.35);border:1px solid #60c0ff;vertical-align:middle;margin-left:6px;"></span> 이동가능(클릭/방향키)
+    <span style="display:inline-block;width:9px;height:9px;background:rgba(80,180,255,0.35);border:1px solid #60c0ff;vertical-align:middle;margin-left:6px;"></span> 이동가능(클릭/WASD)
     <span style="display:inline-block;width:9px;height:9px;background:rgba(240,32,32,0.45);border:1px solid #ff5050;vertical-align:middle;margin-left:6px;"></span> 금지
     <span style="display:inline-block;width:9px;height:9px;background:rgba(255,200,0,0.25);border:1px dashed #ffcc00;vertical-align:middle;margin-left:6px;"></span> 예정
   </div>
@@ -188,10 +188,10 @@
 
 <script>
 const dirTargets = {
-  ArrowUp: {{.NorthPos}},
-  ArrowDown: {{.SouthPos}},
-  ArrowLeft: {{.WestPos}},
-  ArrowRight: {{.EastPos}}
+  KeyW: {{.NorthPos}},
+  KeyS: {{.SouthPos}},
+  KeyA: {{.WestPos}},
+  KeyD: {{.EastPos}}
 };
 
 function moveTo(pos) {
@@ -205,8 +205,8 @@ document.addEventListener('keydown', function (e) {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if (e.ctrlKey || e.altKey || e.metaKey) return;
 
-  if (e.key in dirTargets) {
-    const pos = dirTargets[e.key];
+  if (!e.shiftKey && e.code in dirTargets) {
+    const pos = dirTargets[e.code];
     if (pos >= 0) {
       e.preventDefault();
       moveTo(pos);
