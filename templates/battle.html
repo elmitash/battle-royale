@@ -89,7 +89,7 @@
 
 <table class="br-table">
   <tr>
-    <td rowspan="4" class="cent" style="width:90px;">
+    <td rowspan="5" class="cent" style="width:90px;">
       <img src="/static/img/{{.User.Icon}}.jpg" alt="icon" width="70" height="70"><br>
       <span class="9">{{.User.Club}}</span>
     </td>
@@ -108,13 +108,12 @@
     <th>무기</th><td colspan="3" class="wep">{{.User.WeaponName}} (공격 {{.User.WeaponAtt}} / 내구 {{formatDur .User.WeaponDur}})</td>
   </tr>
   <tr>
-    <th>방어구</th>
-    <td colspan="3" class="clo">
-      몸: {{.User.ArmorBody}} ({{.User.ArmorBodyDef}}/{{formatDur .User.ArmorBodyDur}}) |
-      머리: {{.User.ArmorHead}} ({{.User.ArmorHeadDef}}/{{formatDur .User.ArmorHeadDur}}) |
-      다리: {{.User.ArmorFoot}} ({{.User.ArmorFootDef}}/{{formatDur .User.ArmorFootDur}}) |
-      팔: {{.User.ArmorArm}} ({{.User.ArmorArmDef}}/{{formatDur .User.ArmorArmDur}})
-    </td>
+    <th>방어구 (몸 / 머리)</th><td class="clo">{{.User.ArmorBody}} ({{.User.ArmorBodyDef}}/{{formatDur .User.ArmorBodyDur}})</td>
+    <td colspan="2" class="clo">{{.User.ArmorHead}} ({{.User.ArmorHeadDef}}/{{formatDur .User.ArmorHeadDur}})</td>
+  </tr>
+  <tr>
+    <th colspan="2">방어구 (다리 / 팔)</th><td class="clo">{{.User.ArmorFoot}} ({{.User.ArmorFootDef}}/{{formatDur .User.ArmorFootDur}})</td>
+    <td colspan="2" class="clo">{{.User.ArmorArm}} ({{.User.ArmorArmDef}}/{{formatDur .User.ArmorArmDur}})</td>
   </tr>
 </table>
 
