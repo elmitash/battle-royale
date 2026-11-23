@@ -4,10 +4,6 @@
 <div class="br-error">프로그램이 종료되었습니다. <a href="/winner">역대 우승자 확인</a></div>
 {{end}}
 
-{{if .Flash}}
-<div style="border: 1px solid #60ff60; background: #102010; color: #e8ffe8; padding: 10px; margin-bottom: 12px; white-space: pre-line;">{{.Flash}}</div>
-{{end}}
-
 {{if and .Target (ne .User.Status "DEAD")}}
 <div style="border: 1px solid #f03020; background: #200808; padding: 12px; margin-bottom: 14px;">
   <div style="display:flex; gap:12px; align-items:center;">
@@ -85,6 +81,10 @@
     {{end}}
   </div>
 </div>
+
+{{if .Flash}}
+<div style="border: 1px solid #60ff60; background: #102010; color: #e8ffe8; padding: 10px; margin: 12px 0; white-space: pre-line;">{{.Flash}}</div>
+{{end}}
 
 <table class="br-table">
   <tr>
