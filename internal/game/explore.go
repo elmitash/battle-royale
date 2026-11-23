@@ -77,7 +77,7 @@ func (e *Engine) Move(ctx context.Context, userID string, targetPos int) (string
 	} else {
 		logs = append(logs, fmt.Sprintf("%s (%s)(으)로 이동했다.", areaName, areaCode))
 	}
-	logs = append(logs, strings.ReplaceAll(areaDesc, "<br>", " "))
+	logs = append(logs, strings.ReplaceAll(areaDesc, "<br>", "\n"))
 
 	u.AreaID = targetPos
 
