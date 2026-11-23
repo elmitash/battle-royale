@@ -1,40 +1,47 @@
-# Battle Royale Web Game (Go + SQLite Porting)
+# Battle Royale Web Game (Go + SQLite)
 
-2003년 한글판 Perl CGI 웹게임(`Br1.15Ruria`) 및 실운영 데이터/이미지를 기반으로, **Go + SQLite** 단일 바이너리 웹 애플리케이션으로 현대화 포팅하기 위한 개발 설계 문서 저장소입니다.
+2000년대 클래식 웹게임 **배틀로얄(Battle Royale)** 을 **Go + SQLite(WAL)** 단일 바이너리 웹 애플리케이션으로 현대화 포팅한 프로젝트입니다.
 
 ---
 
-## 1. 원본 소스 및 실운영 에셋 위치
+## 주요 기능
 
-| 구분 | 경로 | 비고 |
+* **10×10 섬 지도 탐색 & 이동**: 22개 주요 거점과 45개 섬 내 길목(총 67개 육지 타일 + 바다 이동 제한)으로 구성된 지도에서 동·서·남·북 이동 및 탐색
+* **실시간 지도 오버레이 & 단축키**:
+  * 메인 화면 지도에서 현재 위치, 금지구역, 다음 금지예정 구역, 인접 이동 가능 칸 실시간 표시
+  * **이동**: 지도 칸 클릭 또는 `W` / `A` / `S` / `D` 키
+  * **아이템**: 숫자키 `1`~`6` (사용/장착), `Shift + 1`~`6` (버리기)
+* **전투 & 성장 시스템**: 선제/기습 판정, 무기별 숙련도·명중률·방어구 상성, 반격, 내구도, 레벨업, 시체 전리품 회수
+* **아이템 & 자동 조합**: 체력/스태미나 회복, 무기/방어구/장신구 장착, 탄환/화살 장전, 덫 설치(`TN`→`TO`), 170여 종 조합식 자동 감지 및 원클릭 합성
+* **특수 시스템 & 금지구역 스케줄러**: 레이더 탐지, 독약/독 조사, 모바일PC 해킹(금지구역 해제), 프로그램 해제키 엔딩, 백그라운드 금지구역 자동 확장
+* **보안 & 관리자 모드 (`/admin`)**: `bcrypt` 비밀번호 해싱, `HttpOnly` 세션 쿠키, 라운드 초기화(`DATARESET`), 유저 관리, SQLite 온라인 백업 다운로드
+
+---
+
+## 실행 방법
+
+### 요구 사항
+* Go 1.23 이상
+
+### 로컬 실행
+```bash
+go mod tidy
+BR_ADMIN_PASS=your_admin_password go run ./cmd/server
+```
+기본 접속 주소: `http://localhost:8080`
+
+### 환경변수
+| 변수명 | 기본값 | 설명 |
 | --- | --- | --- |
-| **Perl CGI 원본 소스** | `/home/elmilin/다운로드/Br1.15Ruria/` | 총 6,219줄 (CP949/CRLF) |
-| **실운영 이미지 에셋** | `/home/elmilin/다운로드/763759eb50e844bcba8/img/` | 총 58개 파일 (`0.jpg`~`56.jpg` 등 + `map.jpg`) |
-| **실운영 커스텀 데이터** | `/home/elmilin/다운로드/763759eb50e844bcba8/dat/` | `gousei_tbl.cgi` 등 대폭 확장된 테이블 |
+| `BR_PORT` | `8080` | HTTP 서버 포트 |
+| `BR_DB_PATH` | `./battle_royale.db` | SQLite 데이터베이스 파일 경로 |
+| `BR_DATA_DIR` | `./data` | 마스터 데이터(`*.cgi`) 디렉토리 |
+| `BR_STATIC_DIR` | `./static` | 정적 파일(`css`, `img`) 디렉토리 |
+| `BR_ADMIN_PASS` | `1234` | 정부통제실(`/admin`) 비밀번호 (운영 시 반드시 변경) |
+| `BR_ADMIN_ID` | `npc` | NPC 계정 접두사 |
 
-> **중요:** `Br1.15Ruria/dat/` 보다 `763759eb50e844bcba8/dat/`가 실제 운영 시 커스텀 추가된 데이터(특히 조합식 `gousei_tbl.cgi` 10KB)를 포함하고 있으므로, 포팅 시에는 **실운영 `dat/`와 `img/`를 기준**으로 UTF-8 변환 후 사용합니다.
-
----
-
-## 2. 문서 구성
-
-1. **[01-legacy-analysis.md](./docs/01-legacy-analysis.md)**
-   * 기존 Perl 소스 파일별 역할 및 서브루틴 매핑
-   * 플랫 파일 DB / CSV 스키마 / 파일 락 구조 분석
-   * 실운영 데이터 차이점 및 레거시 코드의 한계점
-2. **[02-go-architecture.md](./docs/02-go-architecture.md)**
-   * Go + SQLite(WAL) 기반 대체 아키텍처 및 패키지 구조
-   * SQLite 테이블 스키마 설계
-   * 동시성 제어, 인증/보안, 금지구역 스케줄러, UI/정적 파일 서빙 개선안
-3. **[03-porting-checklist-and-ops.md](./docs/03-porting-checklist-and-ops.md)**
-   * 단계별 포팅 로드맵 (Phase 1 ~ 5)
-   * 테스트 및 검증 전략 (전투 공식 대조, 동시성 `-race` 테스트)
-   * 오라클 프리티어 1GB RAM VPS 배포 및 운영 체크리스트
-
----
-
-## 3. 새 채팅창에서 개발 시작하기
-
-새 채팅창을 열고 이 폴더(`/home/elmilin/dev/work/battle-royale/`)를 워크스페이스로 지정한 뒤, 아래와 같이 요청하면 바로 개발을 시작할 수 있습니다.
-
-> "`README.md`와 `docs/` 문서를 읽고, Phase 1(Go 모듈 초기화, 실운영 `dat/`/`img/` UTF-8 변환 및 임포트, SQLite 스키마 및 기본 서버 뼈대 구축)부터 시작해 줘."
+### 테스트 및 배포용 빌드
+```bash
+go test -race ./...
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o battle-royale ./cmd/server
+```
