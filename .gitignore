@@ -1,15 +1,39 @@
-# Binaries
+# Binaries & Build outputs
 battle-royale
 *.exe
+*.out
+*.test
+dist/
+bin/
+tmp/
 
-# SQLite databases & WAL files
+# Go test coverage & profiles
+coverage.*
+*.coverprofile
+*.prof
+
+# SQLite databases, WAL & backups
 *.db
 *.db-wal
 *.db-shm
+*.sqlite
+*.sqlite3
+*.bak
 
 # Environment / secrets
 .env
+.env.*
+!.env.example
 
-# OS / Editor
+# Logs
+*.log
+logs/
+
+# OS / Editor / IDE
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
