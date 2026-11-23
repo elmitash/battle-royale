@@ -3,9 +3,11 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"battle-royale/internal/config"
 	"battle-royale/internal/game"
@@ -43,12 +45,47 @@ func (h *PlayHandler) BattlePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	forbiddenSet := make(map[int]bool)
+	warningSet := make(map[int]bool)
 	if gs.HackFlag == 0 {
 		for i, id := range gs.AreaOrder {
 			if i < gs.ForbiddenCount {
 				forbiddenSet[id] = true
+			} else if i < gs.ForbiddenCount+3 {
+				warningSet[id] = true
 			}
 		}
+	}
+
+	type mapCell struct {
+		Name      string
+		Code      string
+		LeftPct   string
+		TopPct    string
+		SizePct   string
+		Forbidden bool
+		Warning   bool
+		IsCurrent bool
+	}
+	var mapCells []mapCell
+	const totalPx = 740.0
+	const padPx = 30.0
+	const cellPx = 70.0
+	sizePct := fmt.Sprintf("%.3f", (cellPx/totalPx)*100.0)
+
+	for _, a := range config.Areas {
+		rIdx, cIdx := parseAreaGrid(a.Code)
+		leftPct := fmt.Sprintf("%.3f", ((padPx+float64(cIdx)*cellPx)/totalPx)*100.0)
+		topPct := fmt.Sprintf("%.3f", ((padPx+float64(rIdx)*cellPx)/totalPx)*100.0)
+		mapCells = append(mapCells, mapCell{
+			Name:      a.Name,
+			Code:      a.Code,
+			LeftPct:   leftPct,
+			TopPct:    topPct,
+			SizePct:   sizePct,
+			Forbidden: forbiddenSet[a.ID],
+			Warning:   warningSet[a.ID],
+			IsCurrent: a.ID == u.AreaID,
+		})
 	}
 
 	type moveOption struct {
@@ -89,6 +126,7 @@ func (h *PlayHandler) BattlePage(w http.ResponseWriter, r *http.Request) {
 		"AreaCode":    areaCode,
 		"AreaInfo":    areaInfo,
 		"MoveOptions": moveOptions,
+		"MapCells":    mapCells,
 		"Flash":       flash,
 		"MaxStamina":  config.MaxStamina,
 		"TacticsList": []string{"보통", "공격중시", "방어중시", "은밀행동", "탐색중시", "연속공격"},
@@ -336,6 +374,19 @@ func popFlash(w http.ResponseWriter, r *http.Request) string {
 		return c.Value
 	}
 	return decoded
+}
+
+func parseAreaGrid(code string) (rowIdx int, colIdx int) {
+	parts := strings.Split(code, "-")
+	if len(parts) != 2 || len(parts[0]) == 0 {
+		return 0, 0
+	}
+	r := int(parts[0][0] - 'A')
+	c, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0
+	}
+	return r, c - 1
 }
 
 // MapPage displays the map image and forbidden zone schedule.

@@ -53,6 +53,30 @@
 </div>
 {{end}}
 
+<div style="margin: 10px auto 14px auto; max-width: 460px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:9pt;">
+    <span><strong>현재 위치:</strong> <span style="color:#60ff90;">{{.AreaName}} ({{.AreaCode}})</span></span>
+    <span>
+      <span style="display:inline-block;width:10px;height:10px;background:rgba(0,255,136,0.45);border:1px solid #00ff88;vertical-align:middle;"></span> 현재
+      <span style="display:inline-block;width:10px;height:10px;background:rgba(240,32,32,0.45);border:1px solid #ff5050;vertical-align:middle;margin-left:6px;"></span> 금지
+      <span style="display:inline-block;width:10px;height:10px;background:rgba(255,200,0,0.25);border:1px dashed #ffcc00;vertical-align:middle;margin-left:6px;"></span> 예정
+    </span>
+  </div>
+  <div style="position:relative; width:100%; aspect-ratio:1/1; border:1px solid #555;">
+    <img src="/static/img/map.jpg" alt="배틀로얄 지도" style="width:100%; height:100%; display:block;">
+    {{range .MapCells}}
+      {{if .Forbidden}}
+      <div title="{{.Name}} ({{.Code}}) - 금지구역" style="position:absolute; left:{{.LeftPct}}%; top:{{.TopPct}}%; width:{{.SizePct}}%; height:{{.SizePct}}%; background:rgba(240,30,30,0.45); border:1px solid rgba(255,90,90,0.9); box-sizing:border-box; pointer-events:none;"></div>
+      {{else if .Warning}}
+      <div title="{{.Name}} ({{.Code}}) - 다음 금지구역 예정" style="position:absolute; left:{{.LeftPct}}%; top:{{.TopPct}}%; width:{{.SizePct}}%; height:{{.SizePct}}%; background:rgba(255,200,0,0.20); border:1px dashed rgba(255,210,50,0.9); box-sizing:border-box; pointer-events:none;"></div>
+      {{end}}
+      {{if .IsCurrent}}
+      <div title="현재 위치: {{.Name}} ({{.Code}})" style="position:absolute; left:{{.LeftPct}}%; top:{{.TopPct}}%; width:{{.SizePct}}%; height:{{.SizePct}}%; background:rgba(0,255,136,0.28); border:2px solid #00ff88; box-shadow:0 0 8px #00ff88; box-sizing:border-box; pointer-events:none;"></div>
+      {{end}}
+    {{end}}
+  </div>
+</div>
+
 <table class="br-table">
   <tr>
     <td rowspan="4" class="cent" style="width:90px;">
