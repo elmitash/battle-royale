@@ -1,8 +1,10 @@
 package config
 
 import (
+	"bufio"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // AreaTrait represents the special modifier of an area.
@@ -44,8 +46,9 @@ type Config struct {
 	AdminID   string
 }
 
-// Load reads runtime configuration from environment variables with safe defaults.
+// Load reads runtime configuration from .env (if present) and environment variables.
 func Load() Config {
+	loadDotEnv(".env")
 	return Config{
 		Port:      getEnv("BR_PORT", "8080"),
 		DBPath:    getEnv("BR_DB_PATH", "./battle_royale.db"),
@@ -53,6 +56,31 @@ func Load() Config {
 		StaticDir: getEnv("BR_STATIC_DIR", "./static"),
 		AdminPass: getEnv("BR_ADMIN_PASS", "1234"),
 		AdminID:   getEnv("BR_ADMIN_ID", "npc"),
+	}
+}
+
+func loadDotEnv(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		k = strings.TrimSpace(k)
+		v = strings.Trim(strings.TrimSpace(v), `"'`)
+		if k != "" && os.Getenv(k) == "" {
+			_ = os.Setenv(k, v)
+		}
 	}
 }
 

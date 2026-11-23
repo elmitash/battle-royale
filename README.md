@@ -25,10 +25,11 @@
 
 ### 로컬 실행
 ```bash
+cp .env.example .env   # BR_ADMIN_PASS 등을 원하는 값으로 수정
 go mod tidy
-BR_ADMIN_PASS=your_admin_password go run ./cmd/server
+go run ./cmd/server
 ```
-기본 접속 주소: `http://localhost:8080`
+기본 접속 주소: `http://localhost:8080` (`.env` 파일이 있으면 자동으로 읽어옵니다)
 
 ### 환경변수
 | 변수명 | 기본값 | 설명 |
