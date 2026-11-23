@@ -148,8 +148,11 @@ func (h *AuthHandler) RegistSubmit(w http.ResponseWriter, r *http.Request) {
 	if err := h.DB.QueryRowContext(r.Context(), `SELECT forbidden_count, hack_flag, area_order FROM game_state WHERE id = 1`).Scan(&fCount, &hFlag, &orderJSON); err == nil && hFlag == 0 {
 		var order []int
 		if json.Unmarshal([]byte(orderJSON), &order) == nil {
-			for try := 0; try < 20; try++ {
+			for try := 0; try < 50; try++ {
 				cand := rand.IntN(100)
+				if config.IsOcean(cand) {
+					continue
+				}
 				if named := config.NamedAreaByGridPos(cand); named != nil {
 					forbidden := false
 					for i := 0; i < fCount && i < len(order); i++ {

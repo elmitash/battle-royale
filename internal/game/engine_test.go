@@ -82,6 +82,11 @@ func TestMoveSearchAndRecovery(t *testing.T) {
 		t.Fatalf("expected non-adjacent move rejected, got %d", u.AreaID)
 	}
 
+	// Ocean move check: A-2 (pos=1) -> A-1 (pos=0, ocean) must be blocked
+	if !config.IsOcean(0) || config.IsOcean(1) {
+		t.Fatal("expected A-1 ocean and A-2 land")
+	}
+
 	// Move north to C-5 (pos=24)
 	if _, err := eng.Move(ctx, "u1", 24); err != nil {
 		t.Fatalf("move to pos 24: %v", err)

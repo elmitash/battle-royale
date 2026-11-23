@@ -79,20 +79,32 @@ func (h *PlayHandler) BattlePage(w http.ResponseWriter, r *http.Request) {
 	adjDirs := map[int]string{}
 	northPos, southPos, westPos, eastPos := -1, -1, -1, -1
 	if curR > 0 {
-		northPos = (curR-1)*10 + curC
-		adjDirs[northPos] = "↑ 북"
+		p := (curR-1)*10 + curC
+		if !config.IsOcean(p) {
+			northPos = p
+			adjDirs[p] = "↑ 북"
+		}
 	}
 	if curR < 9 {
-		southPos = (curR+1)*10 + curC
-		adjDirs[southPos] = "↓ 남"
+		p := (curR+1)*10 + curC
+		if !config.IsOcean(p) {
+			southPos = p
+			adjDirs[p] = "↓ 남"
+		}
 	}
 	if curC > 0 {
-		westPos = curR*10 + (curC - 1)
-		adjDirs[westPos] = "← 서"
+		p := curR*10 + (curC - 1)
+		if !config.IsOcean(p) {
+			westPos = p
+			adjDirs[p] = "← 서"
+		}
 	}
 	if curC < 9 {
-		eastPos = curR*10 + (curC + 1)
-		adjDirs[eastPos] = "→ 동"
+		p := curR*10 + (curC + 1)
+		if !config.IsOcean(p) {
+			eastPos = p
+			adjDirs[p] = "→ 동"
+		}
 	}
 
 	for pos := 0; pos < 100; pos++ {

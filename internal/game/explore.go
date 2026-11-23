@@ -17,6 +17,9 @@ func (e *Engine) Move(ctx context.Context, userID string, targetPos int) (string
 	if targetPos < 0 || targetPos >= 100 {
 		return "존재하지 않는 좌표입니다.", nil
 	}
+	if config.IsOcean(targetPos) {
+		return "바다로는 이동할 수 없습니다.", nil
+	}
 
 	e.mu.Lock()
 	defer e.mu.Unlock()

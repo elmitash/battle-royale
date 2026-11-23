@@ -190,3 +190,25 @@ func AreaNameAndCode(pos int) (string, string, string) {
 	}
 	return "섬 외곽 숲길", GridCode(pos), "특별한 건물이 없는 평범한 섬의 숲길이다."
 }
+
+var oceanSet = func() map[int]bool {
+	codes := []string{
+		"A-1", "A-3", "A-4", "A-5", "A-6", "A-7", "A-8", "A-9", "A-10",
+		"B-1", "B-6", "B-7", "B-8", "B-9", "B-10",
+		"C-8", "C-9", "C-10",
+		"D-10", "E-10", "F-10", "G-10",
+		"H-1",
+		"I-1", "I-2",
+		"J-1", "J-2", "J-3", "J-4", "J-5", "J-8", "J-9", "J-10",
+	}
+	m := make(map[int]bool, len(codes))
+	for _, c := range codes {
+		m[GridPosFromCode(c)] = true
+	}
+	return m
+}()
+
+// IsOcean reports whether the 0..99 grid position is impassable ocean.
+func IsOcean(pos int) bool {
+	return oceanSet[pos]
+}
