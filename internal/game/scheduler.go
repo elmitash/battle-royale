@@ -76,9 +76,10 @@ func (e *Engine) CheckForbiddenZones(ctx context.Context) error {
 	// Kill any alive non-NPC0 users in forbidden areas
 	for i := 0; i < newCount && i < len(gs.AreaOrder); i++ {
 		aid := gs.AreaOrder[i]
+		gridPos := config.GridPosByAreaID(aid)
 		rows, err := tx.QueryContext(ctx,
 			`SELECT id, first_name, last_name, class_name FROM users WHERE area_id = ? AND status != 'DEAD' AND status != 'NPC0' AND hp > 0`,
-			aid,
+			gridPos,
 		)
 		if err != nil {
 			continue

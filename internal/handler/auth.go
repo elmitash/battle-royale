@@ -141,6 +141,33 @@ func (h *AuthHandler) RegistSubmit(w http.ResponseWriter, r *http.Request) {
 	clubs := []string{"검도부", "궁도부", "야구부", "육상부", "사격부", "요리부", "컴퓨터부", "귀가부"}
 	club := clubs[rand.IntN(len(clubs))]
 
+	// Spawn at a random non-forbidden 10x10 grid position (0..99).
+	spawnPos := rand.IntN(100)
+	var fCount, hFlag int
+	var orderJSON string
+	if err := h.DB.QueryRowContext(r.Context(), `SELECT forbidden_count, hack_flag, area_order FROM game_state WHERE id = 1`).Scan(&fCount, &hFlag, &orderJSON); err == nil && hFlag == 0 {
+		var order []int
+		if json.Unmarshal([]byte(orderJSON), &order) == nil {
+			for try := 0; try < 20; try++ {
+				cand := rand.IntN(100)
+				if named := config.NamedAreaByGridPos(cand); named != nil {
+					forbidden := false
+					for i := 0; i < fCount && i < len(order); i++ {
+						if order[i] == named.ID {
+							forbidden = true
+							break
+						}
+					}
+					if forbidden {
+						continue
+					}
+				}
+				spawnPos = cand
+				break
+			}
+		}
+	}
+
 	wep := model.ItemSpec{Name: "맨손", Kind: "WN", Effect: 0, Durability: 0}
 	if len(h.Master.Weapons) > 0 {
 		wep = h.Master.Weapons[rand.IntN(len(h.Master.Weapons))]
@@ -159,9 +186,9 @@ func (h *AuthHandler) RegistSubmit(w http.ResponseWriter, r *http.Request) {
 			id, password_hash, first_name, last_name, sex, class_name, student_no, club, icon,
 			status, tactics, area_id, att, def, hp, max_hp, level, exp, stamina, kills, last_action_at,
 			weapon_name, weapon_kind, weapon_att, weapon_dur, proficiency_json
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ALIVE', '보통', 0, ?, ?, ?, ?, 1, ?, ?, 0, ?, ?, ?, ?, ?, ?)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ALIVE', '보통', ?, ?, ?, ?, ?, 1, ?, ?, 0, ?, ?, ?, ?, ?, ?)`,
 		id, string(pwHash), firstName, lastName, sex, className, studentNo, club, icon,
-		att, def, maxHP, maxHP, config.BaseExp, config.MaxStamina, now,
+		spawnPos, att, def, maxHP, maxHP, config.BaseExp, config.MaxStamina, now,
 		wep.Name, wep.Kind, wep.Effect, wep.Durability, string(profJSON),
 	); err != nil {
 		renderErr("캐릭터 생성에 실패했습니다.")

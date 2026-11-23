@@ -37,16 +37,18 @@ func (e *Engine) UseRadar(ctx context.Context, userID string, slot int) (string,
 	}
 
 	if u.Items[slot].Kind == "R1" {
+		curName, curCode, _ := config.AreaNameAndCode(u.AreaID)
 		c := counts[u.AreaID]
-		return fmt.Sprintf("[간이 레이더] 현재 지역(%s)에 나 외의 생존 반응이 %d건 감지되었습니다.", config.Areas[u.AreaID].Name, c), nil
+		return fmt.Sprintf("[간이 레이더] 현재 위치(%s %s)에 나 외의 생존 반응이 %d건 감지되었습니다.", curName, curCode, c), nil
 	}
 
 	var sb strings.Builder
 	sb.WriteString("[광역 레이더 탐지 결과]\n")
 	total := 0
-	for _, a := range config.Areas {
-		if c := counts[a.ID]; c > 0 {
-			sb.WriteString(fmt.Sprintf("- %s (%s): %d명\n", a.Name, a.Code, c))
+	for aid, c := range counts {
+		if c > 0 {
+			aName, aCode, _ := config.AreaNameAndCode(aid)
+			sb.WriteString(fmt.Sprintf("- %s (%s): %d명\n", aName, aCode, c))
 			total += c
 		}
 	}

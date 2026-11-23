@@ -137,3 +137,56 @@ func Icons() []IconInfo {
 	}
 	return icons
 }
+
+// GridCode returns "A-1".."J-10" for a 0..99 grid position.
+func GridCode(pos int) string {
+	if pos < 0 || pos >= 100 {
+		return "-"
+	}
+	r, c := pos/10, pos%10
+	return string(rune('A'+r)) + "-" + strconv.Itoa(c+1)
+}
+
+// GridPosFromCode converts "A-1".."J-10" to a 0..99 grid position.
+func GridPosFromCode(code string) int {
+	var r, c int
+	if len(code) < 3 || code[1] != '-' {
+		return 0
+	}
+	r = int(code[0] - 'A')
+	v, err := strconv.Atoi(code[2:])
+	if err != nil {
+		return 0
+	}
+	c = v - 1
+	if r < 0 || r >= 10 || c < 0 || c >= 10 {
+		return 0
+	}
+	return r*10 + c
+}
+
+// NamedAreaByGridPos returns the AreaInfo if pos (0..99) has a named location, else nil.
+func NamedAreaByGridPos(pos int) *AreaInfo {
+	for i := range Areas {
+		if GridPosFromCode(Areas[i].Code) == pos {
+			return &Areas[i]
+		}
+	}
+	return nil
+}
+
+// GridPosByAreaID converts a legacy 0..21 area ID into its 0..99 grid position.
+func GridPosByAreaID(areaID int) int {
+	if areaID >= 0 && areaID < len(Areas) {
+		return GridPosFromCode(Areas[areaID].Code)
+	}
+	return 0
+}
+
+// AreaNameAndCode returns the display name and grid code for any 0..99 position.
+func AreaNameAndCode(pos int) (string, string, string) {
+	if a := NamedAreaByGridPos(pos); a != nil {
+		return a.Name, a.Code, a.Info
+	}
+	return "섬 외곽 숲길", GridCode(pos), "특별한 건물이 없는 평범한 섬의 숲길이다."
+}

@@ -38,7 +38,7 @@
             <option value="10">팔: {{.Target.ArmorArm}}</option>
             {{range .Target.Items}}
               {{if ne .Name "없음"}}
-              <option value="{{.Slot}}">소지품 {{.Slot}}: {{.Name}}</option>
+              <option value="{{.Slot}}">소지품 {{add .Slot 1}}: {{.Name}}</option>
               {{end}}
             {{end}}
           </select>
@@ -53,20 +53,30 @@
 </div>
 {{end}}
 
-<div style="margin: 10px auto 14px auto; max-width: 460px;">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:9pt;">
-    <span><strong>현재 위치:</strong> <span style="color:#60ff90;">{{.AreaName}} ({{.AreaCode}})</span></span>
-    <span>
-      <span style="display:inline-block;width:10px;height:10px;background:rgba(0,255,136,0.45);border:1px solid #00ff88;vertical-align:middle;"></span> 현재
-      <span style="display:inline-block;width:10px;height:10px;background:rgba(240,32,32,0.45);border:1px solid #ff5050;vertical-align:middle;margin-left:6px;"></span> 금지
-      <span style="display:inline-block;width:10px;height:10px;background:rgba(255,200,0,0.25);border:1px dashed #ffcc00;vertical-align:middle;margin-left:6px;"></span> 예정
-    </span>
+<form id="move-form" method="POST" action="/battle/move" style="display:none;">
+  <input type="hidden" id="move-area-id" name="area_id" value="">
+</form>
+
+<div style="margin: 10px auto 14px auto; max-width: 480px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px; font-size:9pt;">
+    <span><strong>현재:</strong> <span style="color:#60ff90;">{{.AreaName}} ({{.AreaCode}})</span></span>
+    <span><strong>다음 금지구역:</strong> <span class="red">{{formatTime .NextAreaAt}}</span> ({{.ForbiddenCount}}/22)</span>
+  </div>
+  <div style="text-align:right; margin-bottom:4px; font-size:8pt; color:#bbb;">
+    <span style="display:inline-block;width:9px;height:9px;background:rgba(0,255,136,0.45);border:1px solid #00ff88;vertical-align:middle;"></span> 현재
+    <span style="display:inline-block;width:9px;height:9px;background:rgba(80,180,255,0.35);border:1px solid #60c0ff;vertical-align:middle;margin-left:6px;"></span> 이동가능(클릭/방향키)
+    <span style="display:inline-block;width:9px;height:9px;background:rgba(240,32,32,0.45);border:1px solid #ff5050;vertical-align:middle;margin-left:6px;"></span> 금지
+    <span style="display:inline-block;width:9px;height:9px;background:rgba(255,200,0,0.25);border:1px dashed #ffcc00;vertical-align:middle;margin-left:6px;"></span> 예정
   </div>
   <div style="position:relative; width:100%; aspect-ratio:1/1; border:1px solid #555;">
     <img src="/static/img/map.jpg" alt="배틀로얄 지도" style="width:100%; height:100%; display:block;">
     {{range .MapCells}}
       {{if .Forbidden}}
       <div title="{{.Name}} ({{.Code}}) - 금지구역" style="position:absolute; left:{{.LeftPct}}%; top:{{.TopPct}}%; width:{{.SizePct}}%; height:{{.SizePct}}%; background:rgba(240,30,30,0.45); border:1px solid rgba(255,90,90,0.9); box-sizing:border-box; pointer-events:none;"></div>
+      {{else if .IsAdjacent}}
+        {{if ne $.User.Status "DEAD"}}
+        <div onclick="moveTo({{.GridPos}})" title="{{.DirLabel}}: {{.Name}} ({{.Code}})로 이동" style="position:absolute; left:{{.LeftPct}}%; top:{{.TopPct}}%; width:{{.SizePct}}%; height:{{.SizePct}}%; background:{{if .Warning}}rgba(255,200,0,0.28){{else}}rgba(80,180,255,0.24){{end}}; border:2px {{if .Warning}}dashed #ffcc00{{else}}solid rgba(100,200,255,0.9){{end}}; box-sizing:border-box; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:9pt; font-weight:bold; color:#fff; text-shadow:0 0 3px #000;">{{.DirLabel}}</div>
+        {{end}}
       {{else if .Warning}}
       <div title="{{.Name}} ({{.Code}}) - 다음 금지구역 예정" style="position:absolute; left:{{.LeftPct}}%; top:{{.TopPct}}%; width:{{.SizePct}}%; height:{{.SizePct}}%; background:rgba(255,200,0,0.20); border:1px dashed rgba(255,210,50,0.9); box-sizing:border-box; pointer-events:none;"></div>
       {{end}}
@@ -91,8 +101,8 @@
     <th>스태미나</th><td class="sp">{{.User.Stamina}} / {{.MaxStamina}}</td>
   </tr>
   <tr>
-    <th>공격력 / 방어력</th><td>{{.User.Att}} / {{.User.Def}} (킬: {{.User.Kills}})</td>
-    <th>현재 위치</th><td><strong>{{.AreaName}}</strong> ({{.AreaCode}})</td>
+    <th>공격력 / 방어력</th><td>{{.User.Att}} / {{.User.Def}}</td>
+    <th>킬 수</th><td>{{.User.Kills}}</td>
   </tr>
   <tr>
     <th>무기</th><td colspan="3" class="wep">{{.User.WeaponName}} (공격 {{.User.WeaponAtt}} / 내구 {{formatDur .User.WeaponDur}})</td>
@@ -109,18 +119,9 @@
 </table>
 
 {{if ne .User.Status "DEAD"}}
-<div style="display:flex; flex-wrap:wrap; gap:12px; margin:12px 0;">
+<div style="display:flex; flex-wrap:wrap; gap:10px; margin:12px 0;">
   <form method="POST" action="/battle/search">
     <button type="submit">주위 탐색</button>
-  </form>
-
-  <form method="POST" action="/battle/move" style="display:flex; gap:6px;">
-    <select name="area_id">
-      {{range .MoveOptions}}
-      <option value="{{.ID}}">{{.Name}} ({{.Code}})</option>
-      {{end}}
-    </select>
-    <button type="submit">이동</button>
   </form>
 
   <form method="POST" action="/battle/firstaid">
@@ -147,23 +148,23 @@
 </div>
 {{end}}
 
-<h3>소지품 (슬롯 0~4 + 장신구 5)</h3>
+<h3>소지품 (단축키: 1~6 사용/장착, Shift+1~6 버리기)</h3>
 <table class="br-table">
-  <tr><th>슬롯</th><th>이름</th><th>종류</th><th>효과</th><th>내구/수량</th><th>행동</th></tr>
+  <tr><th>키</th><th>이름</th><th>종류</th><th>효과</th><th>내구/수량</th><th>행동</th></tr>
   {{range .User.Items}}
   <tr>
-    <td class="cent">{{if eq .Slot 5}}장신구{{else}}{{.Slot}}{{end}}</td>
+    <td class="cent">{{if eq .Slot 5}}6 (장신구){{else}}{{add .Slot 1}}{{end}}</td>
     <td>{{.Name}}</td>
     <td class="cent">{{formatKind .Kind}}</td>
     <td class="cent">{{.Effect}}</td>
     <td class="cent">{{formatDur .Durability}}</td>
     <td class="cent">
       {{if and (ne .Name "없음") (ne $.User.Status "DEAD")}}
-      <form method="POST" action="/battle/item/use" style="display:inline;">
+      <form id="use-form-{{.Slot}}" method="POST" action="/battle/item/use" style="display:inline;">
         <input type="hidden" name="slot" value="{{.Slot}}">
         <button type="submit">사용/장착</button>
       </form>
-      <form method="POST" action="/battle/item/drop" style="display:inline;">
+      <form id="drop-form-{{.Slot}}" method="POST" action="/battle/item/drop" style="display:inline;">
         <input type="hidden" name="slot" value="{{.Slot}}">
         <button type="submit">버리기</button>
       </form>
@@ -177,13 +178,54 @@
 <form method="POST" action="/battle/item/combine" style="margin-top:10px; display:flex; gap:8px; align-items:center;">
   <strong>아이템 조합:</strong>
   <select name="slot1">
-    <option value="0">슬롯 0</option><option value="1">슬롯 1</option><option value="2">슬롯 2</option><option value="3">슬롯 3</option><option value="4">슬롯 4</option>
+    <option value="0">1번</option><option value="1">2번</option><option value="2">3번</option><option value="3">4번</option><option value="4">5번</option>
   </select>
   +
   <select name="slot2">
-    <option value="1">슬롯 1</option><option value="0">슬롯 0</option><option value="2">슬롯 2</option><option value="3">슬롯 3</option><option value="4">슬롯 4</option>
+    <option value="1">2번</option><option value="0">1번</option><option value="2">3번</option><option value="3">4번</option><option value="4">5번</option>
   </select>
   <button type="submit">조합하기</button>
 </form>
+
+<script>
+const dirTargets = {
+  ArrowUp: {{.NorthPos}},
+  ArrowDown: {{.SouthPos}},
+  ArrowLeft: {{.WestPos}},
+  ArrowRight: {{.EastPos}}
+};
+
+function moveTo(pos) {
+  if (pos < 0 || pos >= 100) return;
+  document.getElementById('move-area-id').value = String(pos);
+  document.getElementById('move-form').submit();
+}
+
+document.addEventListener('keydown', function (e) {
+  const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+  if (e.key in dirTargets) {
+    const pos = dirTargets[e.key];
+    if (pos >= 0) {
+      e.preventDefault();
+      moveTo(pos);
+    }
+    return;
+  }
+
+  const m = /^Digit([1-6])$/.exec(e.code);
+  if (m) {
+    const slot = parseInt(m[1], 10) - 1;
+    const formId = (e.shiftKey ? 'drop-form-' : 'use-form-') + slot;
+    const form = document.getElementById(formId);
+    if (form) {
+      e.preventDefault();
+      form.submit();
+    }
+  }
+});
+</script>
 {{end}}
 {{end}}

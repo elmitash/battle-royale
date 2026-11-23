@@ -12,10 +12,10 @@ import (
 	"battle-royale/internal/model"
 )
 
-// Move relocates the user to targetAreaID, deducts stamina, and triggers area search.
-func (e *Engine) Move(ctx context.Context, userID string, targetAreaID int) (string, error) {
-	if targetAreaID < 0 || targetAreaID >= len(config.Areas) {
-		return "존재하지 않는 지역입니다.", nil
+// Move relocates the user 1 step (N/S/E/W) to targetPos (0..99), deducts stamina, and searches.
+func (e *Engine) Move(ctx context.Context, userID string, targetPos int) (string, error) {
+	if targetPos < 0 || targetPos >= 100 {
+		return "존재하지 않는 좌표입니다.", nil
 	}
 
 	e.mu.Lock()
@@ -35,15 +35,33 @@ func (e *Engine) Move(ctx context.Context, userID string, targetAreaID int) (str
 		return "사망한 상태에서는 이동할 수 없습니다.", nil
 	}
 
+	r1, c1 := u.AreaID/10, u.AreaID%10
+	r2, c2 := targetPos/10, targetPos%10
+	dr := r1 - r2
+	if dr < 0 {
+		dr = -dr
+	}
+	dc := c1 - c2
+	if dc < 0 {
+		dc = -dc
+	}
+	if dr+dc != 1 {
+		return "현재 위치에서 동·서·남·북 인접한 칸으로만 이동할 수 있습니다.", nil
+	}
+
 	gs, err := getGameStateQ(ctx, tx)
 	if err != nil {
 		return "", err
 	}
 
-	forbidden, warning := isAreaForbidden(gs, targetAreaID)
-	area := config.Areas[targetAreaID]
-	if forbidden {
-		return fmt.Sprintf("%s은(는) 금지구역입니다. 이동할 수 없습니다...", area.Name), nil
+	areaName, areaCode, areaDesc := config.AreaNameAndCode(targetPos)
+	var warning bool
+	if named := config.NamedAreaByGridPos(targetPos); named != nil {
+		var forbidden bool
+		forbidden, warning = isAreaForbidden(gs, named.ID)
+		if forbidden {
+			return fmt.Sprintf("%s (%s)은(는) 금지구역입니다. 이동할 수 없습니다...", areaName, areaCode), nil
+		}
 	}
 
 	now := time.Now().Unix()
@@ -52,13 +70,13 @@ func (e *Engine) Move(ctx context.Context, userID string, targetAreaID int) (str
 
 	var logs []string
 	if warning {
-		logs = append(logs, fmt.Sprintf("%s(으)로 이동했다. 곧 이곳은 금지구역이 되겠구나.", area.Name))
+		logs = append(logs, fmt.Sprintf("%s (%s)(으)로 이동했다. 곧 이곳은 금지구역이 되겠구나.", areaName, areaCode))
 	} else {
-		logs = append(logs, fmt.Sprintf("%s(으)로 이동했다.", area.Name))
+		logs = append(logs, fmt.Sprintf("%s (%s)(으)로 이동했다.", areaName, areaCode))
 	}
-	logs = append(logs, strings.ReplaceAll(area.Info, "<br>", " "))
+	logs = append(logs, strings.ReplaceAll(areaDesc, "<br>", " "))
 
-	u.AreaID = targetAreaID
+	u.AreaID = targetPos
 
 	staCost := rand.IntN(5) + 8
 	if strings.Contains(u.PoisonFlag, "足") {
@@ -87,7 +105,7 @@ func (e *Engine) Move(ctx context.Context, userID string, targetAreaID int) (str
 	return strings.Join(logs, "\n"), nil
 }
 
-// Search explores the user's current area for items, traps, or random events.
+// Search explores the user's current grid cell for items, traps, or encounters.
 func (e *Engine) Search(ctx context.Context, userID string) (string, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -139,25 +157,41 @@ func (e *Engine) Search(ctx context.Context, userID string) (string, error) {
 	return strings.Join(logs, "\n"), nil
 }
 
+func areaItemKey(gridPos int) int {
+	if named := config.NamedAreaByGridPos(gridPos); named != nil {
+		return named.ID
+	}
+	return 100 + gridPos
+}
+
 func (e *Engine) searchAreaTx(ctx context.Context, tx *sql.Tx, u *model.User, now int64) ([]string, error) {
-	// 1. Random area event (~15% chance, matching event.cgi dice >= 17 out of 0..19)
-	if evLogs, triggered, err := triggerAreaEvent(ctx, tx, u, now); err != nil {
-		return nil, err
-	} else if triggered {
-		return evLogs, nil
+	named := config.NamedAreaByGridPos(u.AreaID)
+
+	// 1. Random area event (named areas only)
+	if named != nil {
+		if evLogs, triggered, err := triggerAreaEvent(ctx, tx, u, named.ID, now); err != nil {
+			return nil, err
+		} else if triggered {
+			return evLogs, nil
+		}
 	}
 
-	// 2. Enemy / Corpse encounter
-	if target, _, encLog, err := e.findEncounterTx(ctx, tx, u, now); err != nil {
+	// 2. Enemy / Corpse encounter: 60% base in named areas, 20% base in unnamed wilderness
+	encRate := 20
+	if named != nil {
+		encRate = 60
+	}
+	if target, _, encLog, err := e.findEncounterTx(ctx, tx, u, now, encRate); err != nil {
 		return nil, err
 	} else if target != nil {
 		return []string{encLog}, nil
 	}
 
 	// 3. Discover item or trap from area_items
+	itemKey := areaItemKey(u.AreaID)
 	rows, err := tx.QueryContext(ctx,
 		`SELECT id, name, kind, effect, durability FROM area_items WHERE area_id = ?`,
-		u.AreaID,
+		itemKey,
 	)
 	if err != nil {
 		return nil, err
@@ -170,6 +204,15 @@ func (e *Engine) searchAreaTx(ctx context.Context, tx *sql.Tx, u *model.User, no
 		}
 	}
 	rows.Close()
+
+	// Unnamed cells: if no dropped items/traps exist there, only 25% chance to scavenge a minor starter item.
+	if named == nil && len(areaItems) == 0 {
+		if rand.IntN(100) >= 25 || len(e.Master.StartItems) == 0 {
+			return []string{"주변을 살폈지만 특별한 것을 찾지 못했다."}, nil
+		}
+		scav := e.Master.StartItems[rand.IntN(len(e.Master.StartItems))]
+		return giveItemToUser(u, scav.Name, scav.Kind, scav.Effect, scav.Durability), nil
+	}
 
 	if len(areaItems) == 0 {
 		return []string{"이제, 이 지역에는 아무것도 없는건가...?"}, nil
@@ -198,50 +241,54 @@ func (e *Engine) searchAreaTx(ctx context.Context, tx *sql.Tx, u *model.User, no
 		return logs, nil
 	}
 
-	// Find empty or stackable slot (0..4; slot 5 is accessory)
+	logs := giveItemToUser(u, picked.Name, picked.Kind, picked.Effect, picked.Durability)
+	if !strings.Contains(logs[0], "포기했다") {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM area_items WHERE id = ?`, picked.ID); err != nil {
+			return nil, err
+		}
+	}
+	return logs, nil
+}
+
+func giveItemToUser(u *model.User, name, kind string, effect, durability int) []string {
 	targetSlot := -1
-	isStackable := strings.HasPrefix(picked.Kind, "WC") ||
-		strings.HasPrefix(picked.Kind, "TN") ||
-		strings.HasPrefix(picked.Kind, "NR") ||
-		strings.Contains(picked.Name, "탄환") ||
-		strings.Contains(picked.Name, "화살")
+	isStackable := strings.HasPrefix(kind, "WC") ||
+		strings.HasPrefix(kind, "TN") ||
+		strings.HasPrefix(kind, "NR") ||
+		strings.Contains(name, "탄환") ||
+		strings.Contains(name, "화살")
 
 	for i := 0; i < 5; i++ {
 		if u.Items[i].Name == "없음" {
 			targetSlot = i
 			break
 		}
-		if isStackable && u.Items[i].Name == picked.Name && u.Items[i].Kind == picked.Kind {
+		if isStackable && u.Items[i].Name == name && u.Items[i].Kind == kind {
 			targetSlot = i
 			break
 		}
 	}
 
 	if targetSlot == -1 {
-		return []string{fmt.Sprintf("%s을(를) 발견했다. 그러나, 더 이상 가방에 들어가지 않아 포기했다...", picked.Name)}, nil
-	}
-
-	if _, err := tx.ExecContext(ctx, `DELETE FROM area_items WHERE id = ?`, picked.ID); err != nil {
-		return nil, err
+		return []string{fmt.Sprintf("%s을(를) 발견했다. 그러나, 더 이상 가방에 들어가지 않아 포기했다...", name)}
 	}
 
 	if u.Items[targetSlot].Name == "없음" {
 		u.Items[targetSlot] = model.UserItem{
 			UserID:     u.ID,
 			Slot:       targetSlot,
-			Name:       picked.Name,
-			Kind:       picked.Kind,
-			Effect:     picked.Effect,
-			Durability: picked.Durability,
+			Name:       name,
+			Kind:       kind,
+			Effect:     effect,
+			Durability: durability,
 		}
-	} else if strings.Contains(picked.Name, "탄환") || strings.Contains(picked.Name, "화살") {
-		u.Items[targetSlot].Effect += picked.Effect
-	} else if picked.Durability > 0 && u.Items[targetSlot].Durability != model.DurabilityInfinite {
-		u.Items[targetSlot].Durability += picked.Durability
+	} else if strings.Contains(name, "탄환") || strings.Contains(name, "화살") {
+		u.Items[targetSlot].Effect += effect
+	} else if durability > 0 && u.Items[targetSlot].Durability != model.DurabilityInfinite {
+		u.Items[targetSlot].Durability += durability
 	}
 
-	hint := itemDiscoveryHint(picked.Kind)
-	return []string{fmt.Sprintf("%s을(를) 발견했다. %s", picked.Name, hint)}, nil
+	return []string{fmt.Sprintf("%s을(를) 발견했다. %s", name, itemDiscoveryHint(kind))}
 }
 
 func itemDiscoveryHint(kind string) string {
@@ -263,14 +310,14 @@ func itemDiscoveryHint(kind string) string {
 	}
 }
 
-func triggerAreaEvent(ctx context.Context, tx *sql.Tx, u *model.User, now int64) ([]string, bool, error) {
+func triggerAreaEvent(ctx context.Context, tx *sql.Tx, u *model.User, namedAreaID int, now int64) ([]string, bool, error) {
 	dice := rand.IntN(20)
 	if dice < 17 {
 		return nil, false, nil
 	}
 	dmg := rand.IntN(5) + 5
 
-	switch u.AreaID {
+	switch namedAreaID {
 	case 2, 12, 18:
 		logs := []string{"문득 하늘을 보자 새떼들이다!"}
 		if dice == 18 {

@@ -57,14 +57,17 @@ func (h *PlayHandler) BattlePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type mapCell struct {
-		Name      string
-		Code      string
-		LeftPct   string
-		TopPct    string
-		SizePct   string
-		Forbidden bool
-		Warning   bool
-		IsCurrent bool
+		GridPos    int
+		Name       string
+		Code       string
+		LeftPct    string
+		TopPct     string
+		SizePct    string
+		Forbidden  bool
+		Warning    bool
+		IsCurrent  bool
+		IsAdjacent bool
+		DirLabel   string
 	}
 	var mapCells []mapCell
 	const totalPx = 740.0
@@ -72,39 +75,68 @@ func (h *PlayHandler) BattlePage(w http.ResponseWriter, r *http.Request) {
 	const cellPx = 70.0
 	sizePct := fmt.Sprintf("%.3f", (cellPx/totalPx)*100.0)
 
-	for _, a := range config.Areas {
-		rIdx, cIdx := parseAreaGrid(a.Code)
-		leftPct := fmt.Sprintf("%.3f", ((padPx+float64(cIdx)*cellPx)/totalPx)*100.0)
-		topPct := fmt.Sprintf("%.3f", ((padPx+float64(rIdx)*cellPx)/totalPx)*100.0)
+	curR, curC := u.AreaID/10, u.AreaID%10
+	adjDirs := map[int]string{}
+	northPos, southPos, westPos, eastPos := -1, -1, -1, -1
+	if curR > 0 {
+		northPos = (curR-1)*10 + curC
+		adjDirs[northPos] = "↑ 북"
+	}
+	if curR < 9 {
+		southPos = (curR+1)*10 + curC
+		adjDirs[southPos] = "↓ 남"
+	}
+	if curC > 0 {
+		westPos = curR*10 + (curC - 1)
+		adjDirs[westPos] = "← 서"
+	}
+	if curC < 9 {
+		eastPos = curR*10 + (curC + 1)
+		adjDirs[eastPos] = "→ 동"
+	}
+
+	for pos := 0; pos < 100; pos++ {
+		named := config.NamedAreaByGridPos(pos)
+		isForbidden := named != nil && forbiddenSet[named.ID]
+		isWarning := named != nil && warningSet[named.ID]
+		isCur := pos == u.AreaID
+		dirLabel, isAdj := adjDirs[pos]
+
+		if !isForbidden && !isWarning && !isCur && !isAdj {
+			continue
+		}
+
+		if isAdj && isForbidden {
+			switch pos {
+			case northPos:
+				northPos = -1
+			case southPos:
+				southPos = -1
+			case westPos:
+				westPos = -1
+			case eastPos:
+				eastPos = -1
+			}
+		}
+
+		rIdx, cIdx := pos/10, pos%10
+		name, code, _ := config.AreaNameAndCode(pos)
 		mapCells = append(mapCells, mapCell{
-			Name:      a.Name,
-			Code:      a.Code,
-			LeftPct:   leftPct,
-			TopPct:    topPct,
-			SizePct:   sizePct,
-			Forbidden: forbiddenSet[a.ID],
-			Warning:   warningSet[a.ID],
-			IsCurrent: a.ID == u.AreaID,
+			GridPos:    pos,
+			Name:       name,
+			Code:       code,
+			LeftPct:    fmt.Sprintf("%.3f", ((padPx+float64(cIdx)*cellPx)/totalPx)*100.0),
+			TopPct:     fmt.Sprintf("%.3f", ((padPx+float64(rIdx)*cellPx)/totalPx)*100.0),
+			SizePct:    sizePct,
+			Forbidden:  isForbidden,
+			Warning:    isWarning,
+			IsCurrent:  isCur,
+			IsAdjacent: isAdj,
+			DirLabel:   dirLabel,
 		})
 	}
 
-	type moveOption struct {
-		ID   int
-		Name string
-		Code string
-	}
-	var moveOptions []moveOption
-	for _, a := range config.Areas {
-		if !forbiddenSet[a.ID] && a.ID != u.AreaID {
-			moveOptions = append(moveOptions, moveOption{ID: a.ID, Name: a.Name, Code: a.Code})
-		}
-	}
-
-	areaName, areaCode, areaInfo := "-", "-", ""
-	if u.AreaID >= 0 && u.AreaID < len(config.Areas) {
-		a := config.Areas[u.AreaID]
-		areaName, areaCode, areaInfo = a.Name, a.Code, a.Info
-	}
+	areaName, areaCode, areaInfo := config.AreaNameAndCode(u.AreaID)
 
 	flash := popFlash(w, r)
 
@@ -116,20 +148,25 @@ func (h *PlayHandler) BattlePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.View.Render(w, "battle.html", map[string]any{
-		"Title":       "게임 화면",
-		"LoggedIn":    true,
-		"User":        u,
-		"Target":      target,
-		"GameStatus":  gs.Status,
-		"HackFlag":    gs.HackFlag,
-		"AreaName":    areaName,
-		"AreaCode":    areaCode,
-		"AreaInfo":    areaInfo,
-		"MoveOptions": moveOptions,
-		"MapCells":    mapCells,
-		"Flash":       flash,
-		"MaxStamina":  config.MaxStamina,
-		"TacticsList": []string{"보통", "공격중시", "방어중시", "은밀행동", "탐색중시", "연속공격"},
+		"Title":          "게임 화면",
+		"LoggedIn":       true,
+		"User":           u,
+		"Target":         target,
+		"GameStatus":     gs.Status,
+		"HackFlag":       gs.HackFlag,
+		"ForbiddenCount": gs.ForbiddenCount,
+		"NextAreaAt":     gs.NextAreaAt,
+		"AreaName":       areaName,
+		"AreaCode":       areaCode,
+		"AreaInfo":       areaInfo,
+		"MapCells":       mapCells,
+		"NorthPos":       northPos,
+		"SouthPos":       southPos,
+		"WestPos":        westPos,
+		"EastPos":        eastPos,
+		"Flash":          flash,
+		"MaxStamina":     config.MaxStamina,
+		"TacticsList":    []string{"보통", "공격중시", "방어중시", "은밀행동", "탐색중시", "연속공격"},
 	})
 }
 

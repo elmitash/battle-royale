@@ -59,9 +59,11 @@ func TestMoveSearchAndRecovery(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlayer(t, eng, "u1")
+	// Put u1 at D-5 (pos=34), adjacent to D-6 분교 (pos=35, forbidden) and C-5 소방서 (pos=24, safe).
+	_, _ = eng.DB.Exec(`UPDATE users SET area_id = 34 WHERE id = 'u1'`)
 
-	// Move to area 0 ("분교") is forbidden by default (forbidden_count = 1, area_order[0] = 0).
-	msg, err := eng.Move(ctx, "u1", 0)
+	// Move to D-6 분교 (pos=35) is forbidden by default.
+	msg, err := eng.Move(ctx, "u1", 35)
 	if err != nil {
 		t.Fatalf("move to forbidden: %v", err)
 	}
@@ -69,23 +71,30 @@ func TestMoveSearchAndRecovery(t *testing.T) {
 		t.Fatal("expected forbidden message")
 	}
 	u, _ := eng.LoadUser(ctx, "u1")
-	if u.AreaID != 1 {
-		t.Fatalf("expected user to stay in area 1, got %d", u.AreaID)
+	if u.AreaID != 34 {
+		t.Fatalf("expected user to stay at pos 34, got %d", u.AreaID)
 	}
 
-	// Move to area 2
-	if _, err := eng.Move(ctx, "u1", 2); err != nil {
-		t.Fatalf("move to area 2: %v", err)
+	// Non-adjacent move (e.g. pos 0) should be rejected
+	_, _ = eng.Move(ctx, "u1", 0)
+	u, _ = eng.LoadUser(ctx, "u1")
+	if u.AreaID != 34 {
+		t.Fatalf("expected non-adjacent move rejected, got %d", u.AreaID)
+	}
+
+	// Move north to C-5 (pos=24)
+	if _, err := eng.Move(ctx, "u1", 24); err != nil {
+		t.Fatalf("move to pos 24: %v", err)
 	}
 	u, _ = eng.LoadUser(ctx, "u1")
-	if u.AreaID != 2 {
-		t.Fatalf("expected area 2, got %d", u.AreaID)
+	if u.AreaID != 24 {
+		t.Fatalf("expected pos 24, got %d", u.AreaID)
 	}
 	if u.Stamina >= 200 {
 		t.Fatalf("expected stamina to decrease, got %d", u.Stamina)
 	}
 
-	// Search in area 2
+	// Search at pos 24
 	if _, err := eng.Search(ctx, "u1"); err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -212,12 +221,12 @@ func TestForbiddenZoneExpansionAndHack(t *testing.T) {
 	ctx := context.Background()
 
 	seedTestPlayer(t, eng, "victim")
-	// Put victim in the next forbidden area (area_order[1]) and expire next_area_at
+	// Put victim in the next forbidden area (area_order[1] converted to 0..99 gridPos) and expire next_area_at
 	gs, err := eng.GetGameState(ctx)
 	if err != nil {
 		t.Fatalf("get game state: %v", err)
 	}
-	_, _ = eng.DB.Exec(`UPDATE users SET area_id = ? WHERE id = 'victim'`, gs.AreaOrder[1])
+	_, _ = eng.DB.Exec(`UPDATE users SET area_id = ? WHERE id = 'victim'`, config.GridPosByAreaID(gs.AreaOrder[1]))
 	_, _ = eng.DB.Exec(`UPDATE game_state SET next_area_at = ? WHERE id = 1`, time.Now().Unix()-10)
 
 	if err := eng.CheckForbiddenZones(ctx); err != nil {

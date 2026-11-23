@@ -174,7 +174,7 @@ func ResetRound(ctx context.Context, sqlDB *sql.DB, master *MasterData, cfg conf
 		def := rand.Intn(5) + 8
 		maxHP := rand.Intn(20) + 80
 		level := 1
-		areaID := rand.Intn(len(config.Areas)-1) + 1
+		areaID := rand.Intn(100)
 		status := "NPC"
 		var prof model.Proficiency
 
@@ -183,7 +183,7 @@ func ResetRound(ctx context.Context, sqlDB *sql.DB, master *MasterData, cfg conf
 			def = rand.Intn(10) + 40
 			maxHP = rand.Intn(30) + 120
 			level = 10
-			areaID = 0
+			areaID = config.GridPosByAreaID(0)
 			status = "NPC0"
 			p := config.BaseProf * 5
 			prof = model.Proficiency{WN: p, WP: p, WA: p, WG: p, WE: p, WC: p, WD: p, WB: p, WF: p, WS: p}

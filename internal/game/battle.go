@@ -12,10 +12,17 @@ import (
 	"battle-royale/internal/model"
 )
 
-// findEncounterTx searches for an alive enemy or lootable corpse in the same area.
+func areaTrait(gridPos int) config.AreaTrait {
+	if named := config.NamedAreaByGridPos(gridPos); named != nil {
+		return named.Trait
+	}
+	return ""
+}
+
+// findEncounterTx searches for an alive enemy or lootable corpse in the same grid cell.
 // Returns (encounterTarget, isCorpse, ambushLog, error).
-func (e *Engine) findEncounterTx(ctx context.Context, tx *sql.Tx, u *model.User, now int64) (*model.User, bool, string, error) {
-	perSearch := 60
+func (e *Engine) findEncounterTx(ctx context.Context, tx *sql.Tx, u *model.User, now int64, basePerSearch int) (*model.User, bool, string, error) {
+	perSearch := basePerSearch
 	if u.Tactics == "연속공격" {
 		perSearch += (u.Level + u.Kills) / 2
 		if perSearch > 90 {
@@ -64,7 +71,7 @@ func (e *Engine) findEncounterTx(ctx context.Context, tx *sql.Tx, u *model.User,
 				return target, false, fmt.Sprintf("%s (%s)와(과) 조우했다! 선제 공격의 기회다!", target.FullName(), target.ClassName), nil
 			}
 			// Enemy ambushes player once
-			dmg, atkLog := resolveStrike(target, u, config.Areas[u.AreaID].Trait)
+			dmg, atkLog := resolveStrike(target, u, areaTrait(u.AreaID))
 			u.LastTargetID = target.ID
 			target.LastTargetID = u.ID
 			_ = saveUserTx(ctx, tx, target)
@@ -133,7 +140,7 @@ func (e *Engine) Attack(ctx context.Context, userID, targetID string) (string, e
 
 	now := time.Now().Unix()
 	applyRecovery(u, now)
-	trait := config.Areas[u.AreaID].Trait
+	trait := areaTrait(u.AreaID)
 
 	var logs []string
 	dmg, strikeLog := resolveStrike(u, target, trait)

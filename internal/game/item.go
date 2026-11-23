@@ -140,7 +140,7 @@ func (e *Engine) UseItem(ctx context.Context, userID string, slot int) (string, 
 		trapKind := strings.Replace(it.Kind, "TN", "TO", 1)
 		if _, err := tx.ExecContext(ctx,
 			`INSERT INTO area_items (area_id, spawn_group, name, kind, effect, durability, owner_id) VALUES (?, 1, ?, ?, ?, ?, ?)`,
-			u.AreaID, it.Name, trapKind, it.Effect, it.Durability, u.ID,
+			areaItemKey(u.AreaID), it.Name, trapKind, it.Effect, it.Durability, u.ID,
 		); err != nil {
 			return "", err
 		}
@@ -209,14 +209,16 @@ func (e *Engine) UseItem(ctx context.Context, userID string, slot int) (string, 
 		}
 		rows.Close()
 		if it.Kind == "R1" {
-			msg = fmt.Sprintf("[간이 레이더] 현재 지역(%s)에 나 외의 생존 반응이 %d건 감지되었습니다.", config.Areas[u.AreaID].Name, counts[u.AreaID])
+			curName, curCode, _ := config.AreaNameAndCode(u.AreaID)
+			msg = fmt.Sprintf("[간이 레이더] 현재 위치(%s %s)에 나 외의 생존 반응이 %d건 감지되었습니다.", curName, curCode, counts[u.AreaID])
 		} else {
 			var sb strings.Builder
 			sb.WriteString("[광역 레이더 탐지 결과]\n")
 			total := 0
-			for _, a := range config.Areas {
-				if c := counts[a.ID]; c > 0 {
-					sb.WriteString(fmt.Sprintf("- %s (%s): %d명\n", a.Name, a.Code, c))
+			for aid, c := range counts {
+				if c > 0 {
+					aName, aCode, _ := config.AreaNameAndCode(aid)
+					sb.WriteString(fmt.Sprintf("- %s (%s): %d명\n", aName, aCode, c))
 					total += c
 				}
 			}
@@ -241,7 +243,8 @@ func (e *Engine) UseItem(ctx context.Context, userID string, slot int) (string, 
 		}
 
 	case it.Name == "프로그램해제키":
-		if u.AreaID == 0 {
+		named := config.NamedAreaByGridPos(u.AreaID)
+		if named != nil && named.ID == 0 {
 			consumeSlot(&u.Items[slot])
 			if _, err := tx.ExecContext(ctx, `UPDATE game_state SET status = 'ended' WHERE id = 1`); err != nil {
 				return "", err
@@ -300,7 +303,7 @@ func (e *Engine) DropItem(ctx context.Context, userID string, slot int) (string,
 
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO area_items (area_id, spawn_group, name, kind, effect, durability, owner_id) VALUES (?, 1, ?, ?, ?, ?, '')`,
-		u.AreaID, it.Name, it.Kind, it.Effect, it.Durability,
+		areaItemKey(u.AreaID), it.Name, it.Kind, it.Effect, it.Durability,
 	); err != nil {
 		return "", err
 	}
