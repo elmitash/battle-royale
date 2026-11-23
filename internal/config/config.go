@@ -1,0 +1,139 @@
+package config
+
+import (
+	"os"
+	"strconv"
+)
+
+// AreaTrait represents the special modifier of an area.
+type AreaTrait string
+
+const (
+	TraitSearchUp   AreaTrait = "SU" // 발견증가
+	TraitSearchDown AreaTrait = "SD" // 발견감소
+	TraitDefUp      AreaTrait = "DU" // 방어증가
+	TraitDefDown    AreaTrait = "DD" // 방어감소
+	TraitAttUp      AreaTrait = "AU" // 공격증가
+	TraitAttDown    AreaTrait = "AD" // 공격감소
+)
+
+// AreaInfo defines static metadata for one of the 22 map areas (from br.pl).
+type AreaInfo struct {
+	ID    int
+	Name  string
+	Code  string
+	Trait AreaTrait
+	Info  string
+}
+
+// IconInfo defines a selectable character icon.
+type IconInfo struct {
+	ID   int
+	File string
+	Name string
+	Sex  string // "남성" or "여성"
+}
+
+// Config holds runtime server configuration and game constants.
+type Config struct {
+	Port      string
+	DBPath    string
+	DataDir   string
+	StaticDir string
+	AdminPass string
+	AdminID   string
+}
+
+// Load reads runtime configuration from environment variables with safe defaults.
+func Load() Config {
+	return Config{
+		Port:      getEnv("BR_PORT", "8080"),
+		DBPath:    getEnv("BR_DB_PATH", "./battle_royale.db"),
+		DataDir:   getEnv("BR_DATA_DIR", "./data"),
+		StaticDir: getEnv("BR_STATIC_DIR", "./static"),
+		AdminPass: getEnv("BR_ADMIN_PASS", "1234"),
+		AdminID:   getEnv("BR_ADMIN_ID", "npc"),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+// Game constants migrated from br.pl.
+const (
+	GameVersion = "V01.15-Go"
+	GameTitle   = "Battle Royale - Edited by Ruria"
+
+	ClassCount     = 2  // $clmax
+	MaxPerSex      = 21 // $manmax
+	MaxMembers     = ClassCount * MaxPerSex * 2
+	SaveLimitDays  = 7
+	BaseExp        = 16
+	LvExpInc       = 4
+	BaseProf       = 20
+	BattleMinDays  = 2
+	RegLimitDays   = 4
+	MaxStamina     = 300
+	FirstAidSta    = 30
+	PoisonCheckSta = 10
+	RecoverTimeSec = 30 // 30초당 스태미나 +1
+	RecoverHPRatio = 3  // 체력 회복 = 스태미나 회복량 / 3
+
+	IconFemaleStart = 21 // $icon_check: 여자 아이콘 시작 인덱스
+)
+
+// Classes lists available school classes.
+var Classes = []string{
+	"3학년A반", "3학년B반", "3학년C반", "3학년D반", "3학년E반",
+	"3학년F반", "3학년G반", "3학년H반", "3학년I반", "3학년J반",
+}
+
+// Areas defines all 22 regions from br.pl.
+var Areas = []AreaInfo{
+	{0, "분교", "D-6", TraitSearchUp, "분교다. 곧 여기는 금지지역이 되겠구나.<br>빨리 이동하지 않으면, 목걸이가 폭발하고 만다..."},
+	{1, "북쪽 곶", "A-2", TraitDefDown, "바다에는 배가 보인다. 탈출하려는 학생들을 감시하고 있는 정부의 배인가..."},
+	{2, "대포리", "B-4", TraitDefUp, "전에는 여기에서도 사람이 살고 있었겠지. 지금은 폐허로 변했구나."},
+	{3, "면사무소", "C-3", TraitSearchUp, "여기가 마을의 중심인가. 지금으로서는 아무도 없는가..."},
+	{4, "우체국", "C-4", TraitSearchDown, "여기서는, 눈에 띄는 것이 없는데..."},
+	{5, "소방서", "C-5", TraitSearchUp, "소방서라곤 해도, 소방차조차 없구나."},
+	{6, "관음당", "C-6", TraitAttUp, "크고 작은 여러가지 불상이 모셔져 있구나. 밤에는 으시시하겠네."},
+	{7, "맑은 연못", "D-4", TraitSearchUp, "맑은 물이 가득 차 있구나."},
+	{8, "서광사", "E-2", TraitSearchDown, "오래된 불상이 모셔져 있는 절이구나."},
+	{9, "호텔 자리", "E-4", TraitAttDown, "이런 장소는 유령이 자주 나올까? 유령같은건 믿지 않지만."},
+	{10, "터널", "E-7", TraitDefDown, "깜깜하구나. 이런 곳에서 협공당하면 국물도 없겠군."},
+	{11, "서포리", "F-2", TraitDefUp, "여기도, 다른 마을과 같이, 모두 폐허로 변했구나..."},
+	{12, "산악지대", "F-5", TraitSearchUp, "이 섬을 한눈에 볼 수 있는 고지대다. 당연히 이곳에 서 있으면, 다른 곳에서도 날 발견할 가능성이 높을 것이다."},
+	{13, "무연사", "F-8", TraitSearchDown, "모두 아주 황폐해져 있구나."},
+	{14, "학교", "G-3", TraitAttDown, "낮동안의 학교라는 건 좋은 것이지만, 밤의 학교라는 것은 좋은 것이 아니군."},
+	{15, "남해암", "G-6", TraitSearchDown, "사찰 처마도 썩어서 형편없는 모습을 드러내고 있구나."},
+	{16, "삼림지대", "H-4", TraitSearchDown, "나무들이 울창하게 자라 있구나. 풀숲에서 갑자기 습격하더라도 알아채지 못할거야..."},
+	{17, "검은 연못", "H-6", TraitSearchDown, "여기는 연못이라기보다도, 웅덩이구나. 정말 기분 나쁜 곳이야..."},
+	{18, "남포리", "I-6", TraitAttUp, "여기는, 다른 마을보다, 가게가 많구나. 상점가인가 뭔가였겠지."},
+	{19, "요양소", "I-7", TraitSearchUp, "황폐해져 있지만, 찾아보면 아직 사용할 수 있는 약 같은 것이 있을 것 같다..."},
+	{20, "등대", "I-10", TraitDefUp, "요새로서 점거하면, 견고한 요새가 될듯한데. 바닥에는 말라붙은 혈흔이 많이 있구나. 무슨 일이 있었던거지?"},
+	{21, "남쪽 곶", "J-6", TraitSearchUp, "병사의 배와... 우승자가 탈 배인가? 몇척의 배가 떠 있다."},
+}
+
+// Icons returns the 42 selectable student icons (0..20 male, 21..41 female).
+func Icons() []IconInfo {
+	icons := make([]IconInfo, 42)
+	for i := 0; i < 42; i++ {
+		sex := "남성"
+		label := "남자 " + strconv.Itoa(i+1) + "번"
+		if i >= IconFemaleStart {
+			sex = "여성"
+			label = "여자 " + strconv.Itoa(i-IconFemaleStart+1) + "번"
+		}
+		icons[i] = IconInfo{
+			ID:   i,
+			File: strconv.Itoa(i) + ".jpg",
+			Name: label,
+			Sex:  sex,
+		}
+	}
+	return icons
+}

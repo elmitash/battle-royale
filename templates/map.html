@@ -1,0 +1,19 @@
+{{define "content"}}
+<h2>회장 지도</h2>
+<div class="cent">
+  <img src="/static/img/map.jpg" alt="배틀로얄 지도" style="max-width: 100%; border: 1px solid #444;">
+</div>
+<p class="cent">현재 금지구역 수: {{.ForbiddenCount}} / 다음 금지구역 추가: {{formatTime .NextAreaAt}}</p>
+<table class="br-table">
+  <tr><th>순서</th><th>지역명</th><th>좌표</th><th>특성</th><th>상태</th></tr>
+  {{range .Areas}}
+  <tr>
+    <td class="cent">{{.Order}}</td>
+    <td>{{.Name}}</td>
+    <td class="cent">{{.Code}}</td>
+    <td class="cent">{{.Trait}}</td>
+    <td class="cent">{{if .Forbidden}}<span class="red">금지구역</span>{{else}}안전{{end}}</td>
+  </tr>
+  {{end}}
+</table>
+{{end}}

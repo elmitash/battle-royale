@@ -1,0 +1,171 @@
+{{define "content"}}
+<h2>전학수속 (신규 등록)</h2>
+<p>전학 수속을 완료하면 무작위 반·번호·동아리와 초기 무기·지급품이 배정되며 프로그램에 참가하게 됩니다.</p>
+{{if .Error}}
+<div class="br-error">{{.Error}}</div>
+{{end}}
+<form method="POST" action="/regist">
+  <table class="br-table" style="max-width: 640px;">
+    <tr><th>ID</th><td><input type="text" name="id" required maxlength="16"></td></tr>
+    <tr><th>비밀번호</th><td><input type="password" name="password" required></td></tr>
+    <tr>
+      <th>성별</th>
+      <td>
+        <label><input type="radio" name="sex" value="남성" checked onchange="onSexChange()"> 남성</label>
+        <label><input type="radio" name="sex" value="여성" onchange="onSexChange()"> 여성</label>
+      </td>
+    </tr>
+    <tr>
+      <th>성 / 이름</th>
+      <td>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+          <input type="text" id="first_name" name="first_name" required maxlength="10" placeholder="성" style="width:90px;">
+          <input type="text" id="last_name" name="last_name" required maxlength="10" placeholder="이름" style="width:110px;">
+          <button type="button" onclick="fillRandomName('kr')">한국 이름 랜덤</button>
+          <button type="button" onclick="fillRandomName('jp')">일본 이름 랜덤</button>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <th>아이콘</th>
+      <td>
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <img id="icon-preview" src="/static/img/0.jpg" alt="아이콘 미리보기" width="70" height="70" style="border:1px solid #666;">
+          <div>
+            <select id="icon-select" name="icon" onchange="updateIconPreview()">
+              {{range .Icons}}
+              <option value="{{.ID}}">{{.Name}} ({{.Sex}})</option>
+              {{end}}
+            </select>
+            <div style="margin-top:6px;">
+              <button type="button" onclick="toggleIconGallery()">전체 아이콘 펼쳐보기</button>
+            </div>
+          </div>
+        </div>
+        <div id="icon-gallery" style="display:none; margin-top:10px; max-height:280px; overflow-y:auto; border:1px solid #444; padding:6px;">
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            {{range .Icons}}
+            <div onclick="selectIcon({{.ID}}, '{{.Sex}}')" style="cursor:pointer; text-align:center; width:62px;" title="{{.Name}} ({{.Sex}})">
+              <img src="/static/img/{{.ID}}.jpg" width="56" height="56" style="border:1px solid #555; display:block; margin:0 auto;">
+              <span class="8">{{.Name}}</span>
+            </div>
+            {{end}}
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" class="cent"><button type="submit">전학수속 완료</button></td>
+    </tr>
+  </table>
+</form>
+
+<script>
+const krSurnames = [
+  "김","이","박","최","정","강","조","윤","장","임",
+  "한","오","서","신","권","황","안","송","전","홍",
+  "유","고","문","양","손","배","백","허","남","심",
+  "노","하","곽","성","차","주","우","구","민","류"
+];
+const krMaleGiven = [
+  "민준","서준","도윤","예준","시우","하준","주원","지호","지후","준우",
+  "준서","건우","도현","현우","우진","선우","서진","민재","현준","연우",
+  "유준","정우","승우","승현","시윤","준혁","은우","지훈","승민","진우",
+  "지환","윤우","민성","재원","태윤","태양","재현","동현","준영","성민",
+  "성현","찬우","영준","규민","지원","재민","형준","수현","정민","지성",
+  "태현","민규","경민","상현","승호","준호","현성","재훈","도훈","민우",
+  "석진","시현","윤호","호준","창민","기현","범수","영훈","동욱","지완"
+];
+const krFemaleGiven = [
+  "서연","서윤","지우","서현","민서","하은","하윤","윤서","지유","지민",
+  "채원","지윤","은서","수아","다은","예은","수빈","소율","예원","지원",
+  "지아","서아","아린","하린","시아","유진","수연","소윤","유나","예린",
+  "예진","민지","채은","연서","다인","가은","서영","윤아","나은","주아",
+  "수민","하율","아영","유빈","세은","지안","보민","다연","서은","은채",
+  "혜원","수진","지수","현지","나연","유림","소연","정은","예지","채린",
+  "연우","시은","민주","아현","혜진","도연","소민","채영","은지","서진"
+];
+
+const jpSurnames = [
+  "사토","스즈키","타카하시","타나카","와타나베","이토","야마모토","나카무라","코바야시","카토",
+  "요시다","야마다","사사키","야마구치","마츠모토","이노우에","키무라","하야시","사이토","시미즈",
+  "야마자키","모리","아베","이케다","하시모토","야마시타","이시카와","나카지마","마에다","후지타",
+  "오가와","고토","오카다","하세가와","무라카미","콘도","이시이","사카모토","엔도","아오키",
+  "후지이","니시무라","후쿠다","오타","미우라","후지와라","오카모토","마츠다","나카가와","나카노"
+];
+const jpMaleGiven = [
+  "렌","하루토","유우토","소우타","미나토","이츠키","아오이","코우키","유우마","리쿠",
+  "타쿠미","쇼타","카즈키","다이키","켄토","류세이","카즈야","슈야","유우키","하야토",
+  "마사토","나오토","코헤이","료타","진","카나타","소라","토모야","아키라","신지",
+  "케이스케","유스케","타케시","히로토","코타","아사히","히나타","시온","루이","츠바사",
+  "료","준","카이토","타이가","야마토","코우세이","유우야","세이야","마코토","이즈미",
+  "타츠야","슈운","다이스케","카즈마","노조미","료스케","테츠야","치히로","나츠키","슈헤이"
+];
+const jpFemaleGiven = [
+  "히마리","츠무기","메이","아오이","린","사쿠라","유이나","히나","미유","유즈키",
+  "코하루","모모카","하즈키","미사키","나나미","아카리","카논","유우카","아야카","치히로",
+  "리코","유리","마이","카나","아미","하루미","스즈카","마나","에리","노노카",
+  "히카리","코토네","미오","유즈","아스카","마호","사키","나츠미","시즈카","후우카",
+  "카에데","레이","레이나","유키","아유미","사야카","마리나","모에","에미","키라라",
+  "나기","미즈키","호노카","세리나","안나","하루카","노아","유메","시온","아이나"
+];
+
+function getSelectedSex() {
+  const checked = document.querySelector('input[name="sex"]:checked');
+  return checked ? checked.value : "남성";
+}
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function fillRandomName(origin) {
+  const sex = getSelectedSex();
+  if (origin === 'all') {
+    origin = Math.random() < 0.5 ? 'kr' : 'jp';
+  }
+  if (origin === 'kr') {
+    document.getElementById('first_name').value = pickRandom(krSurnames);
+    document.getElementById('last_name').value = pickRandom(sex === '남성' ? krMaleGiven : krFemaleGiven);
+  } else {
+    document.getElementById('first_name').value = pickRandom(jpSurnames);
+    document.getElementById('last_name').value = pickRandom(sex === '남성' ? jpMaleGiven : jpFemaleGiven);
+  }
+}
+
+function updateIconPreview() {
+  const sel = document.getElementById('icon-select');
+  document.getElementById('icon-preview').src = '/static/img/' + sel.value + '.jpg';
+}
+
+function selectIcon(id, sex) {
+  document.getElementById('icon-select').value = String(id);
+  const radio = document.querySelector('input[name="sex"][value="' + sex + '"]');
+  if (radio) radio.checked = true;
+  updateIconPreview();
+}
+
+function onSexChange() {
+  const sex = getSelectedSex();
+  const sel = document.getElementById('icon-select');
+  const cur = parseInt(sel.value, 10);
+  if (sex === '남성' && cur >= 21) {
+    sel.value = String(Math.floor(Math.random() * 21));
+  } else if (sex === '여성' && cur < 21) {
+    sel.value = String(21 + Math.floor(Math.random() * 21));
+  }
+  updateIconPreview();
+  fillRandomName('all');
+}
+
+function toggleIconGallery() {
+  const g = document.getElementById('icon-gallery');
+  g.style.display = (g.style.display === 'none') ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  fillRandomName('all');
+  updateIconPreview();
+});
+</script>
+{{end}}

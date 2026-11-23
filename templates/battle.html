@@ -1,0 +1,165 @@
+{{define "content"}}
+<h2>배틀로얄 메인 화면</h2>
+
+{{if eq .GameStatus "ended"}}
+<div class="br-error">프로그램이 종료되었습니다. <a href="/winner">역대 우승자 확인</a></div>
+{{end}}
+
+{{if .Flash}}
+<div style="border: 1px solid #60ff60; background: #102010; color: #e8ffe8; padding: 10px; margin-bottom: 12px; white-space: pre-line;">{{.Flash}}</div>
+{{end}}
+
+{{if and .Target (ne .User.Status "DEAD")}}
+<div style="border: 1px solid #f03020; background: #200808; padding: 12px; margin-bottom: 14px;">
+  <div style="display:flex; gap:12px; align-items:center;">
+    <img src="/static/img/{{.Target.Icon}}.jpg" alt="target" width="60" height="60">
+    <div>
+      {{if gt .Target.HP 0}}
+        <strong class="red">조우 대상: {{.Target.FirstName}} {{.Target.LastName}} ({{.Target.ClassName}})</strong><br>
+        무기: {{.Target.WeaponName}} | 체력: {{.Target.HP}} / {{.Target.MaxHP}}
+        <div style="margin-top:8px; display:flex; gap:8px;">
+          <form method="POST" action="/battle/attack">
+            <input type="hidden" name="target_id" value="{{.Target.ID}}">
+            <button type="submit">공격하기</button>
+          </form>
+          <form method="POST" action="/battle/runaway">
+            <button type="submit">도망가기</button>
+          </form>
+        </div>
+      {{else}}
+        <strong>시체 발견: {{.Target.FirstName}} {{.Target.LastName}} ({{.Target.ClassName}})</strong><br>
+        <form method="POST" action="/battle/loot" style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+          <input type="hidden" name="target_id" value="{{.Target.ID}}">
+          <select name="source_slot">
+            <option value="6">무기: {{.Target.WeaponName}}</option>
+            <option value="7">몸: {{.Target.ArmorBody}}</option>
+            <option value="8">머리: {{.Target.ArmorHead}}</option>
+            <option value="9">다리: {{.Target.ArmorFoot}}</option>
+            <option value="10">팔: {{.Target.ArmorArm}}</option>
+            {{range .Target.Items}}
+              {{if ne .Name "없음"}}
+              <option value="{{.Slot}}">소지품 {{.Slot}}: {{.Name}}</option>
+              {{end}}
+            {{end}}
+          </select>
+          <button type="submit">전리품 회수</button>
+        </form>
+        <form method="POST" action="/battle/runaway" style="margin-top:6px;">
+          <button type="submit">그냥 떠나기</button>
+        </form>
+      {{end}}
+    </div>
+  </div>
+</div>
+{{end}}
+
+<table class="br-table">
+  <tr>
+    <td rowspan="4" class="cent" style="width:90px;">
+      <img src="/static/img/{{.User.Icon}}.jpg" alt="icon" width="70" height="70"><br>
+      <span class="9">{{.User.Club}}</span>
+    </td>
+    <th>이름</th><td>{{.User.FirstName}} {{.User.LastName}} ({{.User.ClassName}} {{.User.StudentNo}}번 / {{.User.Sex}})</td>
+    <th>상태</th><td>{{if eq .User.Status "DEAD"}}<span class="red">사망</span>{{else}}{{.User.Status}}{{end}} / Lv.{{.User.Level}} (Exp {{.User.Exp}})</td>
+  </tr>
+  <tr>
+    <th>체력</th><td class="hp">{{.User.HP}} / {{.User.MaxHP}}</td>
+    <th>스태미나</th><td class="sp">{{.User.Stamina}} / {{.MaxStamina}}</td>
+  </tr>
+  <tr>
+    <th>공격력 / 방어력</th><td>{{.User.Att}} / {{.User.Def}} (킬: {{.User.Kills}})</td>
+    <th>현재 위치</th><td><strong>{{.AreaName}}</strong> ({{.AreaCode}})</td>
+  </tr>
+  <tr>
+    <th>무기</th><td colspan="3" class="wep">{{.User.WeaponName}} (공격 {{.User.WeaponAtt}} / 내구 {{formatDur .User.WeaponDur}})</td>
+  </tr>
+  <tr>
+    <th>방어구</th>
+    <td colspan="3" class="clo">
+      몸: {{.User.ArmorBody}} ({{.User.ArmorBodyDef}}/{{formatDur .User.ArmorBodyDur}}) |
+      머리: {{.User.ArmorHead}} ({{.User.ArmorHeadDef}}/{{formatDur .User.ArmorHeadDur}}) |
+      다리: {{.User.ArmorFoot}} ({{.User.ArmorFootDef}}/{{formatDur .User.ArmorFootDur}}) |
+      팔: {{.User.ArmorArm}} ({{.User.ArmorArmDef}}/{{formatDur .User.ArmorArmDur}})
+    </td>
+  </tr>
+</table>
+
+{{if ne .User.Status "DEAD"}}
+<div style="display:flex; flex-wrap:wrap; gap:12px; margin:12px 0;">
+  <form method="POST" action="/battle/search">
+    <button type="submit">주위 탐색</button>
+  </form>
+
+  <form method="POST" action="/battle/move" style="display:flex; gap:6px;">
+    <select name="area_id">
+      {{range .MoveOptions}}
+      <option value="{{.ID}}">{{.Name}} ({{.Code}})</option>
+      {{end}}
+    </select>
+    <button type="submit">이동</button>
+  </form>
+
+  <form method="POST" action="/battle/firstaid">
+    <button type="submit">응급처치 (-30 Sta)</button>
+  </form>
+
+  <form method="POST" action="/battle/rest" style="display:flex; gap:4px;">
+    <button type="submit" name="mode" value="치료">치료</button>
+    <button type="submit" name="mode" value="수면">수면</button>
+    {{if ne .User.Status "ALIVE"}}
+    <button type="submit" name="mode" value="ALIVE">행동 재개</button>
+    {{end}}
+  </form>
+
+  <form method="POST" action="/battle/tactics" style="display:flex; gap:6px;">
+    <select name="tactics">
+      {{$cur := .User.Tactics}}
+      {{range .TacticsList}}
+      <option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{.}}</option>
+      {{end}}
+    </select>
+    <button type="submit">방침 변경</button>
+  </form>
+</div>
+{{end}}
+
+<h3>소지품 (슬롯 0~4 + 장신구 5)</h3>
+<table class="br-table">
+  <tr><th>슬롯</th><th>이름</th><th>종류</th><th>효과</th><th>내구/수량</th><th>행동</th></tr>
+  {{range .User.Items}}
+  <tr>
+    <td class="cent">{{if eq .Slot 5}}장신구{{else}}{{.Slot}}{{end}}</td>
+    <td>{{.Name}}</td>
+    <td class="cent">{{formatKind .Kind}}</td>
+    <td class="cent">{{.Effect}}</td>
+    <td class="cent">{{formatDur .Durability}}</td>
+    <td class="cent">
+      {{if and (ne .Name "없음") (ne $.User.Status "DEAD")}}
+      <form method="POST" action="/battle/item/use" style="display:inline;">
+        <input type="hidden" name="slot" value="{{.Slot}}">
+        <button type="submit">사용/장착</button>
+      </form>
+      <form method="POST" action="/battle/item/drop" style="display:inline;">
+        <input type="hidden" name="slot" value="{{.Slot}}">
+        <button type="submit">버리기</button>
+      </form>
+      {{else}}-{{end}}
+    </td>
+  </tr>
+  {{end}}
+</table>
+
+{{if ne .User.Status "DEAD"}}
+<form method="POST" action="/battle/item/combine" style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+  <strong>아이템 조합:</strong>
+  <select name="slot1">
+    <option value="0">슬롯 0</option><option value="1">슬롯 1</option><option value="2">슬롯 2</option><option value="3">슬롯 3</option><option value="4">슬롯 4</option>
+  </select>
+  +
+  <select name="slot2">
+    <option value="1">슬롯 1</option><option value="0">슬롯 0</option><option value="2">슬롯 2</option><option value="3">슬롯 3</option><option value="4">슬롯 4</option>
+  </select>
+  <button type="submit">조합하기</button>
+</form>
+{{end}}
+{{end}}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{if .Title}}{{.Title}} - {{end}}Battle Royale</title>
+  <link rel="stylesheet" href="/static/css/br.css">
+  <style>
+    .br-shell {
+      display: flex;
+      min-height: 100vh;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .br-main {
+      flex: 1;
+      padding: 16px;
+      min-width: 0;
+    }
+    .br-menu {
+      width: 140px;
+      flex-shrink: 0;
+      border-left: 1px dashed #444;
+      padding: 20px 10px;
+      text-align: center;
+      font-size: 11pt;
+    }
+    .br-menu a {
+      display: block;
+      margin: 10px 0;
+    }
+    @media (max-width: 720px) {
+      .br-shell { flex-direction: column-reverse; }
+      .br-menu {
+        width: 100%;
+        border-left: none;
+        border-bottom: 1px dashed #444;
+        padding: 10px;
+      }
+      .br-menu a { display: inline-block; margin: 4px 8px; }
+    }
+    table.br-table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0;
+    }
+    table.br-table th, table.br-table td {
+      border: 1px solid #444;
+      padding: 6px 8px;
+    }
+    table.br-table th {
+      background-color: #202040;
+      color: #ddd;
+    }
+    .br-error {
+      color: #ff6060;
+      border: 1px solid #ff6060;
+      padding: 8px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="br-shell">
+  <main class="br-main">
+    {{template "content" .}}
+  </main>
+  <aside class="br-menu">
+    <div><strong>■ 메뉴 ■</strong></div>
+    <a href="/">로그인</a>
+    <a href="/regist">전학수속<br><span class="9">(신규등록)</span></a>
+    <a href="/rank">생존자 리스트</a>
+    <a href="/news">진행상황</a>
+    <a href="/map">회장 지도</a>
+    <a href="/winner">역대 우승자</a>
+    <a href="/battle">게임 화면</a>
+    <a href="/admin">정부통제실<br><span class="9">(관리자)</span></a>
+    {{if .LoggedIn}}
+    <form method="POST" action="/logout" style="margin-top:12px;">
+      <button type="submit">로그아웃</button>
+    </form>
+    {{end}}
+  </aside>
+</div>
+</body>
+</html>

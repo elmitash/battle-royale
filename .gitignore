@@ -1,0 +1,15 @@
+# Binaries
+battle-royale
+*.exe
+
+# SQLite databases & WAL files
+*.db
+*.db-wal
+*.db-shm
+
+# Environment / secrets
+.env
+
+# OS / Editor
+.DS_Store
+Thumbs.db

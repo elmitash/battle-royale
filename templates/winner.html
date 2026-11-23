@@ -1,0 +1,16 @@
+{{define "content"}}
+<h2>역대 우승자</h2>
+<table class="br-table">
+  <tr><th>종료 시각</th><th>우승자</th><th>엔딩</th><th>킬 수</th></tr>
+  {{range .Winners}}
+  <tr>
+    <td>{{formatTime .RoundEndedAt}}</td>
+    <td>{{.WinnerName}}</td>
+    <td>{{.EndingType}}</td>
+    <td class="cent">{{.Kills}}</td>
+  </tr>
+  {{else}}
+  <tr><td colspan="4" class="cent">아직 우승자 기록이 없습니다.</td></tr>
+  {{end}}
+</table>
+{{end}}

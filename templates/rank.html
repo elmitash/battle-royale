@@ -1,0 +1,19 @@
+{{define "content"}}
+<h2>생존자 리스트</h2>
+<table class="br-table">
+  <tr><th>아이콘</th><th>반 / 번호</th><th>이름</th><th>동아리</th><th>레벨</th><th>킬</th><th>상태</th></tr>
+  {{range .Users}}
+  <tr>
+    <td class="cent"><img src="/static/img/{{.Icon}}.jpg" alt="icon" width="36" height="36"></td>
+    <td>{{.ClassName}} {{.StudentNo}}번</td>
+    <td>{{.FirstName}}{{.LastName}}</td>
+    <td>{{.Club}}</td>
+    <td class="cent">{{.Level}}</td>
+    <td class="cent">{{.Kills}}</td>
+    <td class="cent">{{if eq .Status "DEAD"}}<span class="red">사망</span>{{else}}{{.Status}}{{end}}</td>
+  </tr>
+  {{else}}
+  <tr><td colspan="7" class="cent">등록된 학생이 없습니다.</td></tr>
+  {{end}}
+</table>
+{{end}}

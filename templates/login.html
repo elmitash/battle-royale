@@ -1,0 +1,31 @@
+{{define "content"}}
+<div class="cent">
+  <h1 class="red">BATTLE ROYALE</h1>
+  <p>"Today, I killed my best friend"</p>
+  <hr class="whitehr">
+
+  {{if .Error}}
+  <div class="br-error">{{.Error}}</div>
+  {{end}}
+
+  <form method="POST" action="/login" style="margin: 24px auto; max-width: 320px;">
+    <table class="br-table">
+      <tr>
+        <th>ID</th>
+        <td><input type="text" name="id" required autocomplete="username"></td>
+      </tr>
+      <tr>
+        <th>비밀번호</th>
+        <td><input type="password" name="password" required autocomplete="current-password"></td>
+      </tr>
+      <tr>
+        <td colspan="2" class="cent">
+          <button type="submit">프로그램 참가 (로그인)</button>
+        </td>
+      </tr>
+    </table>
+  </form>
+
+  <p>처음 오셨나요? <a href="/regist">전학수속 (신규 캐릭터 등록)</a></p>
+</div>
+{{end}}
