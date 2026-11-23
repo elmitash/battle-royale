@@ -183,10 +183,68 @@ func GridPosByAreaID(areaID int) int {
 	return 0
 }
 
+var unnamedAreaNames = func() map[int]string {
+	raw := map[string]string{
+		"B-2":  "북쪽 곶 남쪽 길",
+		"B-3":  "대포리 서쪽 갈림길",
+		"B-5":  "대포리 동쪽 해안길",
+		"C-1":  "북서쪽 해안 절벽",
+		"C-2":  "면사무소 서쪽 해안길",
+		"C-7":  "관음당 동쪽 해안길",
+		"D-1":  "서쪽 해안 절벽",
+		"D-2":  "면사무소 남서쪽 길",
+		"D-3":  "면사무소 남쪽 길",
+		"D-5":  "분교 서쪽 길",
+		"D-7":  "분교 동쪽 구불길",
+		"D-8":  "북동쪽 해안 갈림길",
+		"D-9":  "북동쪽 해안가",
+		"E-1":  "서광사 서쪽 해안",
+		"E-3":  "호텔 자리 서쪽 갈림길",
+		"E-5":  "산악지대 북쪽 사면",
+		"E-6":  "분교 남쪽 산길",
+		"E-8":  "터널 동쪽 갈림길",
+		"E-9":  "동쪽 해안 언덕",
+		"F-1":  "서포리 서쪽 해안",
+		"F-3":  "서포리 동쪽 갈림길",
+		"F-4":  "산악지대 서쪽 사면",
+		"F-6":  "산악지대 동쪽 사면",
+		"F-7":  "무연사 서쪽 숲길",
+		"F-9":  "무연사 동쪽 해안길",
+		"G-1":  "남서쪽 해안 절벽",
+		"G-2":  "학교 서쪽 해안길",
+		"G-4":  "학교 동쪽 갈림길",
+		"G-5":  "산악지대 남쪽 사면",
+		"G-7":  "남해암 동쪽 삼거리",
+		"G-8":  "무연사 남쪽 길",
+		"G-9":  "동쪽 해안가 길",
+		"H-2":  "남서쪽 해안 내리막길",
+		"H-3":  "삼림지대 서쪽 갈림길",
+		"H-5":  "삼림지대 동쪽 숲길",
+		"H-7":  "검은 연못 동쪽 길",
+		"H-8":  "남동쪽 내륙 길",
+		"H-9":  "남동쪽 해안 갈림길",
+		"H-10": "등대 북쪽 해안가",
+		"I-3":  "남서쪽 해안 갯바위",
+		"I-4":  "삼림지대 남쪽 해안길",
+		"I-5":  "남포리 서쪽 갈림길",
+		"I-8":  "요양소 동쪽 해안길",
+		"I-9":  "등대 서쪽 길",
+		"J-7":  "요양소 남쪽 해안",
+	}
+	m := make(map[int]string, len(raw))
+	for code, name := range raw {
+		m[GridPosFromCode(code)] = name
+	}
+	return m
+}()
+
 // AreaNameAndCode returns the display name and grid code for any 0..99 position.
 func AreaNameAndCode(pos int) (string, string, string) {
 	if a := NamedAreaByGridPos(pos); a != nil {
 		return a.Name, a.Code, a.Info
+	}
+	if name, ok := unnamedAreaNames[pos]; ok {
+		return name, GridCode(pos), "특별한 건물이 없는 섬의 길목이다. 주위를 살피며 이동하자."
 	}
 	return "섬 외곽 숲길", GridCode(pos), "특별한 건물이 없는 평범한 섬의 숲길이다."
 }
